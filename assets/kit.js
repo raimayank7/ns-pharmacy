@@ -80,7 +80,7 @@
         var papers = S.papers || [S.paper || 'a4'];
         return K.card(t('lg.notes'), '<div class="fg">' + K.f('notes', t('l.notes'), { type: 'textarea', wide: true }) +
           (papers.length > 1 ? K.f('paper', t('l.paper'), { type: 'select', opts: papers.map(function (k) { return [k, t('pp.' + k)]; }) }) : '') +
-          (S.copies ? K.f('copies', t('l.copies'), { type: 'select', opts: [['1', t('cps.1')], ['2', t('cps.n', { n: 2 })]].concat(S.copies > 2 ? [['3', t('cps.n', { n: 3 })]] : []) }) : '') +
+          (S.copies ? K.f('copies', t('l.copies'), { type: 'select', opts: [['1', t('cps.1')]].concat(Array.apply(null, Array(S.copies - 1)).map(function (x, i) { return [String(i + 2), t('cps.n', { n: i + 2 })]; })) }) : '') +
           '<div class="f"><span class="lbl" id="acc-lbl">' + esc(t('l.colour')) + '</span><div class="swatches" role="radiogroup" aria-labelledby="acc-lbl">' + ACCENTS.map(function (c, i) { return '<button type="button" role="radio" class="sw" data-accent="' + c + '" style="--c:' + c + '" aria-label="' + esc(t('colour.n', { n: i + 1 })) + '"></button>'; }).join('') + '</div></div>' +
           (extra || '') + '<p class="hint wide print-note">' + esc(tw('print.en')) + '</p></div>');
       },

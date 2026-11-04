@@ -249,3 +249,9 @@ details.more .fg{margin-top:8px}
 .bk-t tr.ok td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
 .bk-t details ul{margin:4px 0 0;padding-inline-start:18px}
 .pb-t input,.pb-t select{min-width:7.5rem;width:100%}
+/* export and SEZ invoice block (export.js), on the printed sheet */
+.xp{margin:10px 0 0;padding:8px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:10.5px}
+.xp-end{margin:0 0 4px;font-weight:700;letter-spacing:.02em}
+.xp table{border-collapse:collapse}
+.xp th{text-align:left;font-weight:600;color:#4B5563;padding:1px 10px 1px 0;white-space:nowrap}
+.xp td{padding:1px 0}

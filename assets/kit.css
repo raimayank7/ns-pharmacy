@@ -25,3 +25,4 @@ table.day .grand th,table.day .grand td{font-size:1.1rem}
 .sh.th .gs thead th{font-weight:700}
 .it-grid .pos-qty{grid-column:span 2}
 .rt-tables{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 12px}
+.sh .lines.ra th,.sh .lines.ra td{font-size:10px;padding:4px 3px}
