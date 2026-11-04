@@ -466,7 +466,45 @@
     'rx.h1none': 'No Schedule H1 medicine on the saved bills of this business yet.', 'rx.h1done': 'Register saved with {n} lines.',
     'rx.saved': 'Patient saves {v} on MRP', 'rx.soon': '{n} medicine(s) expire within 30 days.', 'rx.repeat': 'Repeat bill',
     'rx.v.med': 'Add at least one medicine with its MRP.', 'rx.v.exp': '{n} is past its expiry date. Expired medicines must not be sold.', 'rx.v.batch': 'Type the batch number of {n}.',
-    'rx.v.doc': 'This bill has a schedule drug: type the doctor’s name.', 'rx.v.pat': 'A Schedule H1 sale needs the patient’s name.'
+    'rx.v.doc': 'This bill has a schedule drug: type the doctor’s name.', 'rx.v.pat': 'A Schedule H1 sale needs the patient’s name.',
+    /* money door sites: khata, purchase, expenses, cheque, cash-book (money.js) */
+    'app.khata': "Khata", 'app.late60': "Due for over 60 days", 'app.gotmon': "Received this month",
+    'app.kcust': "Customers who owe you", 'app.top': "Who owes the most", 'app.since': "Oldest bill {d} · {n} days",
+    'app.khh': "Every bill, cash memo and sale on credit shows here with what is still due. Record money as it comes in and tick the bills it pays; the rest stays due. Send a WhatsApp reminder or a statement of account in one tap.", 'app.csale': "Sale on credit", 'app.csaleh': "Goods or work given now, money later (udhaar). It is saved as an unpaid cash memo, which you can also print on the cash memo site.",
+    'app.phone': "Phone (for WhatsApp)", 'app.given': "What was given (optional)", 'app.contra': "Cash and bank transfer",
+    'app.contrah': "Money moved between your cash and your bank account. It is neither income nor expense.", 'app.d_deposit': "Cash deposited in bank", 'app.d_withdraw': "Cash withdrawn from bank",
+    'app.cdate': "Cheque date", 'app.cdateh': "For a post-dated cheque, the date written on it.", 'app.cbank': "Bank of the cheque",
+    'app.cst': "Cheque status", 'app.con': "Cleared on", 'app.c_hand': "Received, not deposited",
+    'app.c_dep': "Deposited, not cleared", 'app.c_iss': "Given, not cleared", 'app.c_ok': "Cleared",
+    'app.c_bounce': "Bounced", 'app.photo': "Photo of the supplier's bill", 'app.photoh': "Take a photo with your phone or pick a picture. It is made smaller and saved with the bill in this browser.",
+    'app.photorm': "Remove photo", 'app.photobad': "This picture could not be read. Try another photo.", 'app.csv': "Download CSV (Excel)",
+    'app.preg': "Purchase register", 'app.pregh': "Every purchase bill, purchase return and self invoice between the two dates, with GST. Keep it with your GST records or give it to your accountant.", 'app.dn': "Debit note",
+    'app.ebook': "Expense book", 'app.ebookh': "Your expenses by type and month for one financial year. GST you will claim as input tax credit is not counted as an expense.", 'app.yrtot': "Total this year",
+    'app.thismon': "This month", 'app.topcat': "Biggest expense", 'app.yr': "Financial year",
+    'app.chq': "Cheques", 'app.chqh': "Cheques you received and gave, with their dates and status. A cheque that has not cleared is not counted as money in the bank.", 'app.crecv': "Cheque received",
+    'app.cgive': "Cheque given", 'app.inhand': "Cheques not yet cleared", 'app.issued': "Your cheques not yet cleared",
+    'app.pdc': "Post-dated", 'app.due7': "Cheques due in the next 7 days", 'app.pend': "Not cleared",
+    'app.cno': "Cheque no.", 'app.mk_dep': "Deposited", 'app.mk_ok': "Cleared",
+    'app.mk_bounce': "Bounced", 'app.nochq': "No cheques yet. Record one with the buttons above.", 'app.chqfoot': "When a cheque bounces, the bills it paid become due again by themselves. Add any bank charges as an expense.",
+    'app.cbounce': "Mark cheque {n} from {p} as bounced? The bills it paid will be due again.", 'app.bnote': "Cheque marked bounced. The bills it paid are due again.", 'app.books': "Cash and bank books",
+    'app.bankbook2': "Bank book", 'app.daybook': "Day book", 'app.dayh': "Every entry in date order with the accounts it touches, the way an accountant writes a day book (journal).",
+    /* money door sites: menus, footers and the hub's tool list */
+    'nav.khata': "Khata", 'hub.khata': "Khata book: customer dues, ageing, statements and WhatsApp reminders", 'f.khata': "Khata book (customer dues)",
+    'nav.purchase': "Purchase", 'hub.purchase': "Purchase bills, purchase register, returns and debit notes", 'f.purchase': "Purchase bill entry",
+    'nav.expenses': "Expenses", 'hub.expenses': "Expense book with types and monthly totals", 'f.expenses': "Expense book",
+    'nav.cheque': "Cheques", 'hub.cheque': "Cheque register: post-dated, cleared and bounced cheques", 'f.cheque': "Cheque register",
+    'nav.cashbook': "Cash book", 'hub.cashbook': "Cash book, bank book and day book", 'f.cashbook': "Cash book and day book",
+    /* restaurant (restaurant bill and KOT) */
+    'doc.resto': 'bill', 'docs.resto': 'bills', 'Doc.resto': 'Bill', 'nav.restaurant': 'Restaurant bill', 'f.restaurant': 'Restaurant bill and KOT maker',
+    'rt.running': 'Running tables:', 'rt.none': 'none', 'rt.newt': '+ New table / order', 'rt.order': 'Order', 'rt.otype': 'Order type', 'rt.dine': 'Dine-in', 'rt.take': 'Takeaway', 'rt.del': 'Delivery',
+    'rt.table': 'Table', 'rt.guests': 'Guests', 'rt.waiter': 'Waiter / captain', 'rt.additem': '+ Add dish', 'rt.dish': 'Dish or drink', 'rt.knote': 'Note for kitchen', 'rt.knoteph': 'Less spicy, no onion…',
+    'rt.sent': 'Sent to kitchen on KOT {n}', 'rt.kot': 'Print KOT (new items)', 'rt.hold': 'Save table, take next order', 'rt.nokot': 'No new items to send to the kitchen.', 'rt.newk': '{n} item(s) not sent to the kitchen yet.',
+    'rt.billcard': 'Bill and payment', 'rt.disc': 'Discount on bill (%)', 'rt.sc': 'Add service charge', 'rt.sch': 'Only if the guest agrees. It cannot be added on its own or by default (consumer protection guidelines, July 2022).', 'rt.scrate': 'Service charge (%)',
+    'rt.split': 'Split the bill among (people)', 'rt.splith': 'Shows each person’s share on the bill.', 'rt.each': '{n} people: {v} each', 'rt.credit': 'On credit (pay later)', 'rt.guest': 'Guest name (optional)', 'rt.guesth': 'Add a GSTIN below for a company guest.',
+    'rt.settle': 'Settle and print bill', 'rt.settlenp': 'Settle without printing', 'rt.setup': 'Restaurant details and bill settings',
+    'rt.gst': 'GST on food and drinks', 'rt.g5': '5% (most restaurants, no input tax credit)', 'rt.g18': '18% (in a hotel with room tariff above ₹7,500 a day)', 'rt.gcomp': 'Composition (bill of supply, no GST charged)', 'rt.gnone': 'Not GST registered',
+    'rt.gsth': 'One rate for the whole bill. Check with your accountant which applies to you.', 'rt.incl': 'Menu prices include GST', 'rt.noteph': 'For example: Thank you for dining with us. FSSAI Lic. No. …',
+    'rt.v.table': 'Type the table number.', 'rt.open': 'Running'
   };
 
   var packs = { en: EN }, cur = 'en';

@@ -306,6 +306,7 @@
       return p;
     }
     function save() {
+      var cur = doc, curId = editingId;   /* the record being saved, even if a new one is started while saving */
       var probs = validate();
       if (probs.length) {
         var f = $('#' + probs[0][0], root); NS.toast(probs[0][1], 'bad');
@@ -318,24 +319,25 @@
         var dup = all.filter(function (d) { return d.id !== editingId && d.type === DT && key(d.no) === key(doc.no) && NS.fy(d.date) === NS.fy(doc.date) && key(d.seller && d.seller.name) === key(doc.seller.name); })[0];
         if (dup && !confirm(tw('c.qdup', { no: doc.no }))) throw new Error('cancel');
       }).then(function () {
-        var jobs = [], s = doc.seller, b = doc.buyer || {};
+        var jobs = [], s = cur.seller, b = cur.buyer || {};
         jobs.push(upsert('biz', function (x) { return key(x.name) === key(s.name); }, JSON.parse(JSON.stringify(s))));
         if (S.party !== false && String(b.name || '').trim()) jobs.push(NSStore.list('party').then(function (all) {
           var hit = all.filter(function (x) { return key(x.name) === key(b.name); })[0], want = S.party || 'customer';
           var role = !hit || !hit.role ? want : hit.role === want || hit.role === 'both' ? hit.role : 'both';
           return NSStore.put('party', Object.assign(hit || {}, { name: b.name.trim(), addr: b.addr || (hit && hit.addr) || '', state: b.state || (hit && hit.state) || '', phone: b.phone || (hit && hit.phone) || '', gstin: b.gstin || (hit && hit.gstin) || '', role: role }));
         }));
-        (S.masterItems ? S.masterItems(doc) : []).forEach(function (it) {
+        (S.masterItems ? S.masterItems(cur) : []).forEach(function (it) {
           if (!String(it.desc || '').trim()) return;
           jobs.push(upsert('item', function (x) { return key(x.desc) === key(it.desc); }, it));
         });
         return Promise.all(jobs);
       }).then(function () {
-        var rec = JSON.parse(JSON.stringify(doc)); rec.total = r2(sums().total || 0);
-        if (S.record) S.record(rec, sums(), K);
-        if (editingId) rec.id = editingId;
+        var o = S.sums ? S.sums(cur) : { total: 0 }, rec = JSON.parse(JSON.stringify(cur)); rec.total = r2(o.total || 0);
+        if (S.record) S.record(rec, o, K);
+        if (curId) rec.id = curId;
         return NSStore.put('doc', rec);
       }).then(function (rec) {
+        if (cur !== doc) return rec;
         editingId = rec.id; saveDraft(); NS.toast(tw('saved', { no: doc.no })); NS.folderWrite(false); NS.checkReminder(); setStatus();
         if (S.saved) S.saved(rec, K);
         return rec;
@@ -350,6 +352,7 @@
     function openDoc(rec, asCopy) {
       doc = Object.assign(blank(), JSON.parse(JSON.stringify(rec)));
       delete doc.id; delete doc.created; delete doc.updated; delete doc.total;
+      if (S.load) S.load(doc);
       editingId = asCopy ? null : rec.id;
       if (asCopy) { doc.date = NS.today(); if (S.copyOf) S.copyOf(doc, rec, K); }
       buildEditor(); fillForm(); if (asCopy) suggestNumber(true); draw(); saveDraft(); setStatus(); showTab('edit');
