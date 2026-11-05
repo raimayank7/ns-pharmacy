@@ -443,6 +443,7 @@
       ed.addEventListener('input', onInput); ed.addEventListener('change', onInput);
       doc = blank();
       var dr = loadDraft();
+      if (dr && dr.id && /[?&]new=1/.test(location.search)) dr = null;   /* the App's "New ..." (?new=1) starts a fresh document, not the saved one last opened */
       if (dr) { doc = Object.assign(blank(), dr.doc); editingId = dr.id || null; }
       function render() { buildEditor(); fillForm(); draw(); setStatus(); labelButtons(); if (histOpen) renderHistory(); series(); }
       /* "Change number series" under the number box (this site's documents always carry the financial year) */
