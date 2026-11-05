@@ -77,6 +77,7 @@
       else if (ty === 'pbill') { src = d.kind === 'return' ? 'pret' : 'buy'; sign = d.kind === 'return' ? -1 : 1; }
       else if (ty === 'self') { src = 'buy'; sign = 1; }
       else if (ty === 'invoice' || ty === 'cashmemo') { src = 'sale'; sign = -1; }
+      else if (ty === 'note' && d.side === 'purchase') { if (d.kind === 'debit' && d.reason === 'ret') { src = 'pret'; sign = -1; } }   /* goods sent back to the supplier */
       else if (ty === 'note' && d.kind !== 'debit' && d.reason === 'ret') { src = 'sret'; sign = 1; }
       if (!src) return;
       (src === 'open' || src === 'adj' ? d.lines : d.items || []).forEach(function (it) {
