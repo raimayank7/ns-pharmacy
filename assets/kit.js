@@ -388,7 +388,7 @@
           NSStore.get('doc', id).then(function (rec) {
             if (!rec) return;
             if (act === 'open' || act === 'copy') { dlg.close(); openDoc(rec, act === 'copy'); }
-            else if (act === 'del' && confirm(tw('c.del', { no: rec.no }))) return NSStore.del('doc', id).then(function () { if (editingId === id) { editingId = null; setStatus(); } renderHistory(); NS.toast(t('deleted')); });
+            else if (act === 'del' && confirm(t('b1.cdel', { x: rec.no }))) return NSStore.del('doc', id).then(function () { if (editingId === id) { editingId = null; setStatus(); } renderHistory(); NS.toast(t('b1.binned')); }, function (err) { NS.toast(err.message, 'bad'); });
             else if (S.histAct) return Promise.resolve(S.histAct(act, rec, K)).then(function (changed) { if (changed && editingId === id) { doc = Object.assign(doc, changed); fillForm(); draw(); } renderHistory(); });
           });
         });
