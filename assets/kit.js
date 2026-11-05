@@ -434,7 +434,10 @@
       doc = blank();
       var dr = loadDraft();
       if (dr) { doc = Object.assign(blank(), dr.doc); editingId = dr.id || null; }
-      function render() { buildEditor(); fillForm(); draw(); setStatus(); labelButtons(); if (histOpen) renderHistory(); }
+      function render() { buildEditor(); fillForm(); draw(); setStatus(); labelButtons(); if (histOpen) renderHistory(); series(); }
+      /* "Change number series" under the number box (this site's documents always carry the financial year) */
+      function series() { NS.seriesLink($('[data-b="no"]', root), { type: S.type, def: function () { return typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix; }, name: function () { return NS.t('Doc.' + S.type); },
+        digits: S.digits || 3, fy: true, apply: function (c) { CFG = c || {}; if (!editingId) suggestNumber(true); } }); }
       render();
       document.addEventListener('ns-lang', render);
       var typed = false;
@@ -449,7 +452,8 @@
           history.replaceState(null, '', location.pathname + location.hash);
           return NSStore.get('doc', open).then(function (rec) { if (rec && mine(rec)) openDoc(rec, false); else NS.toast(t('conv.none'), 'bad'); }).catch(function () {});
         }
-        if (dr) return;
+        /* an unfinished draft keeps everything, but still gets the next number when its number box is empty or still automatic */
+        if (dr) return suggestNumber(false);
         if (typed) return suggestNumber(false);
         var seller = doc.seller; doc = blank(); doc.seller = seller;
         return (CFG.defBiz ? NSStore.get('biz', CFG.defBiz).catch(function () {}) : Promise.resolve()).then(function (b) {
