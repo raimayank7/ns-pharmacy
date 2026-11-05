@@ -437,6 +437,11 @@
       function render() { buildEditor(); fillForm(); draw(); setStatus(); labelButtons(); if (histOpen) renderHistory(); }
       render();
       document.addEventListener('ns-lang', render);
+      var typed = false;
+      ed.addEventListener('input', function () { typed = true; });
+      /* the form shows at once (it used to wait for the data home, up to 6 s on a first visit, while the preview already showed);
+             saved defaults arrive later and never overwrite what the visitor has started typing */
+      if (!/[?&](open|from)=/.test(location.search)) root.classList.add('live');
       NSStore.ready().then(function () { return NSStore.meta('settings').then(function (c) { CFG = c || {}; }, function () {}); }).then(function () {
         if (NS.leaving) return;
         var open = new URLSearchParams(location.search).get('open');
@@ -445,6 +450,7 @@
           return NSStore.get('doc', open).then(function (rec) { if (rec && mine(rec)) openDoc(rec, false); else NS.toast(t('conv.none'), 'bad'); }).catch(function () {});
         }
         if (dr) return;
+        if (typed) return suggestNumber(false);
         var seller = doc.seller; doc = blank(); doc.seller = seller;
         return (CFG.defBiz ? NSStore.get('biz', CFG.defBiz).catch(function () {}) : Promise.resolve()).then(function (b) {
           if (b && !doc.seller.name) { doc.seller = Object.assign(blank().seller, b); delete doc.seller.id; delete doc.seller.created; delete doc.seller.updated; }
