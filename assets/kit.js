@@ -26,7 +26,7 @@
 
     function blank() {
       var c = CFG[S.type] || {}, inv = CFG.invoice || {};
-      var d = { type: DT, no: '', date: NS.today(), paper: c.paper || S.paper || 'a4', accent: c.accent || inv.accent || ACCENTS[0], copies: 1, notes: c.notes || '',
+      var d = { type: DT, no: '', date: NS.today(), paper: c.paper || S.paper || 'a4', design: c.design || 'classic', accent: c.accent || inv.accent || ACCENTS[0], copies: 1, notes: c.notes || '',
         seller: { name: '', addr: '', city: '', pin: '', state: '', gstin: '', phone: '', email: '', pan: '', logo: '', sign: '', bankName: '', bankAcc: '', bankIfsc: '', bankBranch: '', upi: '' },
         buyer: { name: '', addr: '', city: '', pin: '', state: '', gstin: '', phone: '' } };
       return Object.assign(d, S.blank ? S.blank(c, inv) : {});
@@ -36,6 +36,13 @@
     /* ---------- form helpers handed to the site file ---------- */
     var K = {
       t: t, tw: tw, esc: esc, num: num, r2: r2, P: P, MODES: MODES, doc: function () { return doc; }, sums: sums,
+      /* city and PIN under an address, unless the address already has them typed in */
+      cityPin: function (x) {
+        x = x || {};
+        var a = String(x.addr || '').toLowerCase(), c = String(x.city || '').trim(), n = String(x.pin || '').trim();
+        var out = [c && a.indexOf(c.toLowerCase()) < 0 ? c : '', n && a.indexOf(n) < 0 ? n : ''].filter(Boolean).join(' ');
+        return out ? '<p>' + esc(out) + '</p>' : '';
+      },
       f: function (path, label, o) {
         o = o || {};
         var id = o.id || idOf(path), ty = o.type || 'text', hint = o.hint ? '<small class="hint" id="' + id + '-hint">' + esc(o.hint) + '</small>' : '';
@@ -80,6 +87,7 @@
         var papers = S.papers || [S.paper || 'a4'];
         return K.card(t('lg.notes'), '<div class="fg">' + K.f('notes', t('l.notes'), { type: 'textarea', wide: true }) +
           (papers.length > 1 ? K.f('paper', t('l.paper'), { type: 'select', opts: papers.map(function (k) { return [k, t('pp.' + k)]; }) }) : '') +
+          (papers.some(function (k) { return !/^th/.test(k); }) ? K.design() : '') +
           (S.copies ? K.f('copies', t('l.copies'), { type: 'select', opts: [['1', t('cps.1')]].concat(Array.apply(null, Array(S.copies - 1)).map(function (x, i) { return [String(i + 2), t('cps.n', { n: i + 2 })]; })) }) : '') +
           '<div class="f"><span class="lbl" id="acc-lbl">' + esc(t('l.colour')) + '</span><div class="swatches" role="radiogroup" aria-labelledby="acc-lbl">' + ACCENTS.map(function (c, i) { return '<button type="button" role="radio" class="sw" data-accent="' + c + '" style="--c:' + c + '" aria-label="' + esc(t('colour.n', { n: i + 1 })) + '"></button>'; }).join('') + '</div></div>' +
           (extra || '') + '<p class="hint wide print-note">' + esc(tw('print.en')) + '</p></div>');
@@ -98,11 +106,12 @@
           (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + (o.ltr ? ' dir="ltr"' : ' dir="auto"') + (o.ro ? ' readonly' : '') + '></div>';
       },
       /* printed pieces (English) */
-      open: function (d, cls) { return '<div class="sh ' + (cls || '') + (d.paper === 'a5' ? ' a5' : '') + '" style="--ac:' + esc(d.accent) + '" lang="en-IN" dir="ltr">'; },
+      design: function (show) { return NS.designField('k-design', ' data-b="design"').replace('<div class="f wide dpick-f"', '<div class="f wide dpick-f"' + (show ? ' data-show="' + show + '"' : '')); },
+      open: function (d, cls) { return '<div class="sh ' + (cls || '') + ' d-' + esc(d.design || 'classic') + (d.paper === 'a5' ? ' a5' : '') + '" style="--ac:' + esc(d.accent) + '" lang="en-IN" dir="ltr">'; },
       head: function (d, title, sub, extra) {
         var s = d.seller;
         return '<header class="sh-top"><div class="sh-from">' + (s.logo ? '<img class="logo" src="' + s.logo + '" alt="">' : '') +
-          '<div><h2>' + (s.name ? esc(s.name) : '<span class="ph">Your business name</span>') + '</h2>' + (s.addr ? '<p>' + esc(s.addr).replace(/\n/g, '<br>') + '</p>' : '<p class="ph">Address</p>') +
+          '<div><h2>' + (s.name ? esc(s.name) : '<span class="ph">Your business name</span>') + '</h2>' + (s.addr ? '<p>' + esc(s.addr).replace(/\n/g, '<br>') + '</p>' : '<p class="ph">Address</p>') + K.cityPin(s) +
           (s.state ? '<p>' + esc(NS.stateName(s.state)) + ' (' + s.state + ')</p>' : '') +
           (s.gstin ? '<p>' + P.gstin + ': <b class="mono">' + esc(s.gstin) + '</b></p>' : '') + (s.phone ? '<p>' + P.ph + ': ' + esc(s.phone) + '</p>' : '') + (extra || '') +
           '</div></div><div class="sh-title"><p class="dt">' + title + '</p>' + (sub ? '<p class="copy">' + sub + '</p>' : '') + '</div></header>';
@@ -115,7 +124,7 @@
       },
       party: function (p, title, extra) {
         if (!p || !(p.name || p.addr)) return '<div class="pt"><h4>' + title + '</h4><p class="ph">Name and address</p></div>';
-        return '<div class="pt"><h4>' + title + '</h4><b>' + esc(p.name) + '</b>' + (p.addr ? '<p>' + esc(p.addr).replace(/\n/g, '<br>') + '</p>' : '') +
+        return '<div class="pt"><h4>' + title + '</h4><b>' + esc(p.name) + '</b>' + (p.addr ? '<p>' + esc(p.addr).replace(/\n/g, '<br>') + '</p>' : '') + K.cityPin(p) +
           (p.state ? '<p>' + esc(NS.stateName(p.state)) + ' (' + p.state + ')</p>' : '') + (p.gstin ? '<p>' + P.gstin + ': <b class="mono">' + esc(p.gstin) + '</b></p>' : '') +
           (p.phone ? '<p>' + P.ph + ': ' + esc(p.phone) + '</p>' : '') + (extra || '') + '</div>';
       },
@@ -131,7 +140,7 @@
       thOpen: function (d, title) {
         var s = d.seller;
         return '<div class="sh th ' + esc(d.paper) + '" lang="en-IN" dir="ltr">' + (s.logo ? '<img class="logo" src="' + s.logo + '" alt="">' : '') +
-          '<h2>' + (s.name ? esc(s.name) : '<span class="ph">Your business name</span>') + '</h2>' + (s.addr ? '<p>' + esc(s.addr).replace(/\n/g, '<br>') + '</p>' : '') +
+          '<h2>' + (s.name ? esc(s.name) : '<span class="ph">Your business name</span>') + '</h2>' + (s.addr ? '<p>' + esc(s.addr).replace(/\n/g, '<br>') + '</p>' : '') + K.cityPin(s) +
           (s.gstin ? '<p>' + P.gstin + ': <b class="mono">' + esc(s.gstin) + '</b></p>' : '') + (s.phone ? '<p>' + P.ph + ': ' + esc(s.phone) + '</p>' : '') + (title ? '<p class="dt">' + title + '</p>' : '');
       },
       kv: function (pairs, cls) { pairs = pairs.filter(function (p) { return p && p[1] !== '' && p[1] != null; }); return pairs.length ? '<table class="kv' + (cls ? ' ' + cls : '') + '">' + pairs.map(function (p) { return '<tr' + (p[2] ? ' class="' + p[2] + '"' : '') + '><th>' + p[0] + '</th><td>' + p[1] + '</td></tr>'; }).join('') + '</table>' : ''; },
@@ -199,6 +208,7 @@
         ['seller.gstin', 'buyer.gstin'].forEach(function (p) { var e = $('[data-b="' + p + '"]', ed); if (e) checkGstin(e); });
       }
       $$('[data-accent]', ed).forEach(function (b) { b.setAttribute('aria-checked', String(b.getAttribute('data-accent') === doc.accent)); });
+      NS.designSync(ed, doc.design, doc.accent);
       ['logo', 'sign'].forEach(function (k) { var c = $('[data-clear="' + k + '"]', ed); if (c) c.hidden = !doc.seller[k]; });
       /* data-show="path" or "path=value" or "!path": a field shown only when the record says so */
       $$('[data-show]', ed).forEach(function (e) {
