@@ -1,5 +1,5 @@
-const CACHE = 'ns-pharmacy-a3c91d403f';
-const SHELL = ["/", "/assets/base.css?v=f649108767", "/assets/doc.css?v=1271e229c4", "/assets/i18n.js?v=455b7da3a7", "/assets/store.js?v=eb98e624a1", "/assets/core.js?v=2fde933178", "/assets/kit.js?v=4e3be7f182", "/assets/pharmacy.js?v=6ecd4bf019", "/assets/kit.css?v=22e2f97260"];
+const CACHE = 'ns-pharmacy-e2718a6ce8';
+const SHELL = ["/", "/assets/base.css?v=4939645edb", "/assets/doc.css?v=0adb150aec", "/assets/i18n.js?v=ef518606b1", "/assets/store.js?v=eb98e624a1", "/assets/core.js?v=c74e588f6d", "/assets/kit.js?v=4e3be7f182", "/assets/pharmacy.js?v=6ecd4bf019", "/assets/kit.css?v=22e2f97260"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(n => n.startsWith('ns-') && n !== CACHE).map(n => caches.delete(n)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
