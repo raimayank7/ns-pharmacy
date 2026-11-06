@@ -55,7 +55,7 @@
         return '<div class="f' + (o.wide ? ' wide' : '') + '"' + (o.show ? ' data-show="' + o.show + '"' : '') + '><label for="' + id + '">' + esc(label) + '</label>' + input + hint + '<small class="err" id="' + id + '-err" hidden></small></div>';
       },
       card: function (legend, inner, cls) { return '<fieldset class="card' + (cls ? ' ' + cls : '') + '"><legend>' + esc(legend) + '</legend>' + inner + '</fieldset>'; },
-      states: function (first) { return [['', first || t('choose.state')]].concat(NS.STATES.map(function (x) { return [x[0], x[1] + ' (' + x[0] + ')']; })); },
+      states: function (first) { return [['', first || t('choose.state')]].concat(NS.STATES.map(function (x) { return [x[0], NS.stateLoc(x[0]) + ' (' + x[0] + ')']; })); },
       modes: function (list) { return (list || MODES).map(function (m) { return [m, t('pm.' + m)]; }); },
       bizCard: function (o) {
         o = o || {};
