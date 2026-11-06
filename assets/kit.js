@@ -25,7 +25,7 @@
     function tw(k, v) { return t(k, Object.assign(W(), v || {})); }
 
     function blank() {
-      var c = CFG[S.type] || {}, inv = CFG.invoice || {};
+      var C = NS.cfgFor(CFG, doc && doc.seller), c = C[S.type] || {}, inv = C.invoice || {};
       var d = { type: DT, no: '', date: NS.today(), paper: c.paper || S.paper || 'a4', design: c.design || 'classic', accent: c.accent || inv.accent || ACCENTS[0], copies: 1, notes: c.notes || '',
         seller: { name: '', addr: '', city: '', pin: '', state: '', gstin: '', phone: '', email: '', pan: '', logo: '', sign: '', bankName: '', bankAcc: '', bankIfsc: '', bankBranch: '', upi: '' },
         buyer: { name: '', addr: '', city: '', pin: '', state: '', gstin: '', phone: '' } };
@@ -150,7 +150,7 @@
       changed: function () { fillForm(true); draw(); saveDraft(); },
       refill: function () { fillForm(); draw(); saveDraft(); },
       save: function () { return save(); }, print: function () { printDoc(); }, share: function () { shareDoc(); }, startNew: function () { startNew(); }, showTab: function (w) { showTab(w); },
-      root: function () { return root; }, toast: NS.toast, cfg: function () { return CFG; }, editing: function () { return editingId; }
+      root: function () { return root; }, toast: NS.toast, cfg: function () { return NS.cfgFor(CFG, doc && doc.seller); }, editing: function () { return editingId; }
     };
 
     /* ---------- editor ---------- */
@@ -177,7 +177,7 @@
         fillForm(); suggestNumber(true); draw(); saveDraft();
       });
       var bn = $('[data-b="buyer.name"]', ed);
-      if (bn) NS.suggest(bn, function () { return NSStore.list('party'); }, function (x) { return x.name; }, function (p) {
+      if (bn) NS.suggest(bn, function () { return NSStore.list('party').then(function (l) { return NS.forBiz(l, doc.seller); }); }, function (x) { return x.name; }, function (p) {
         doc.buyer = Object.assign(doc.buyer || {}, { name: p.name, addr: p.addr || '', city: p.city || '', pin: p.pin || '', state: p.state || '', gstin: p.gstin || '', phone: p.phone || '' });
         if (S.pickParty) S.pickParty(p, doc);
         fillForm(); draw(); saveDraft();
@@ -192,7 +192,7 @@
       }).join('');
       $$('[data-del]', box).forEach(function (b) { b.addEventListener('click', function () { var x = b.getAttribute('data-del').split(':'); doc[x[0]].splice(+x[1], 1); renderRows(x[0]); draw(); saveDraft(); }); });
       $$('[data-sug="item"]', box).forEach(function (inp) {
-        NS.suggest(inp, function () { return NSStore.list('item'); }, function (x) { return x.desc; }, function (m) {
+        NS.suggest(inp, function () { return NSStore.list('item').then(function (l) { return NS.forBiz(l, doc.seller); }); }, function (x) { return x.desc; }, function (m) {
           var i = +inp.getAttribute('data-i'), row = doc[n][i];
           if (S.pickItem) S.pickItem(row, m, doc); else { row.desc = m.desc; if (m.hsn) row.hsn = m.hsn; if (m.unit) row.unit = m.unit; if (m.rate != null && m.rate !== '') row.rate = m.rate; if (m.gst != null && m.gst !== '') row.gst = m.gst; }
           renderRows(n); draw(); saveDraft();
@@ -241,7 +241,7 @@
     }
 
     /* ---------- numbering: PREFIX/YY-YY/001 per business and financial year ---------- */
-    function prefixNow() { var c = CFG[S.type] || {}; return String(c.prefix != null ? c.prefix : typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix).trim().replace(/[^A-Za-z0-9\/\-]/g, ''); }
+    function prefixNow() { var c = NS.cfgFor(CFG, doc && doc.seller)[S.type] || {}; return String(c.prefix != null ? c.prefix : typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix).trim().replace(/[^A-Za-z0-9\/\-]/g, ''); }
     function suggestNumber(force) {
       if (editingId && !force) return Promise.resolve();
       var fy = NS.fy(doc.date), short = fy.slice(2, 4) + '-' + fy.slice(5), pre = prefixNow(), digits = S.digits || 3;
@@ -357,8 +357,11 @@
     function startNew() {
       var seller = doc.seller, keep = S.keepOnNew ? S.keepOnNew(doc) : {};
       doc = Object.assign(blank(), keep); editingId = null; doc.seller = seller;
-      fillForm(); suggestNumber(true); draw(); saveDraft(); setStatus();
+      fillForm(); draw(); saveDraft(); setStatus();
+      /* the seller of the last document may have been deleted since: a new document takes a saved business */
+      NS.liveSeller(seller, CFG, true).then(function (b) { if (b) { setSeller(b); fillForm(); draw(); } return suggestNumber(true); }).then(saveDraft, function () {});
     }
+    function setSeller(b) { doc.seller = Object.assign(blank().seller, b); delete doc.seller.id; delete doc.seller.created; delete doc.seller.updated; }
     function openDoc(rec, asCopy) {
       doc = Object.assign(blank(), JSON.parse(JSON.stringify(rec)));
       delete doc.id; delete doc.created; delete doc.updated; delete doc.total;
@@ -447,7 +450,7 @@
       if (dr) { doc = Object.assign(blank(), dr.doc); editingId = dr.id || null; }
       function render() { buildEditor(); fillForm(); draw(); setStatus(); labelButtons(); if (histOpen) renderHistory(); series(); }
       /* "Change number series" under the number box (this site's documents always carry the financial year) */
-      function series() { NS.seriesLink($('[data-b="no"]', root), { type: S.type, def: function () { return typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix; }, name: function () { return NS.t('Doc.' + S.type); },
+      function series() { NS.seriesLink($('[data-b="no"]', root), { type: S.type, biz: function () { return doc.seller; }, def: function () { return typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix; }, name: function () { return NS.t('Doc.' + S.type); },
         digits: S.digits || 3, fy: true, apply: function (c) { CFG = c || {}; if (!editingId) suggestNumber(true); } }); }
       render();
       document.addEventListener('ns-lang', render);
@@ -456,20 +459,25 @@
       /* the form shows at once (it used to wait for the data home, up to 6 s on a first visit, while the preview already showed);
              saved defaults arrive later and never overwrite what the visitor has started typing */
       if (!/[?&](open|from)=/.test(location.search)) root.classList.add('live');
-      NSStore.ready().then(function () { return NSStore.meta('settings').then(function (c) { CFG = c || {}; }, function () {}); }).then(function () {
+      NSStore.ready().then(function () { return NS.loadCfg().then(function (c) { CFG = c || {}; }, function () {}); }).then(function () {
         if (NS.leaving) return;
         var open = new URLSearchParams(location.search).get('open');
         if (open) {
           history.replaceState(null, '', location.pathname + location.hash);
           return NSStore.get('doc', open).then(function (rec) { if (rec && mine(rec)) openDoc(rec, false); else NS.toast(t('conv.none'), 'bad'); }).catch(function () {});
         }
-        /* an unfinished draft keeps everything, but still gets the next number when its number box is empty or still automatic */
-        if (dr) return suggestNumber(false);
-        if (typed) return suggestNumber(false);
-        var seller = doc.seller; doc = blank(); doc.seller = seller;
-        return NS.defaultBiz(CFG).then(function (b) {
-          if (b && !doc.seller.name) { doc.seller = Object.assign(blank().seller, b); delete doc.seller.id; delete doc.seller.created; delete doc.seller.updated; }
-          render(); return suggestNumber(true);
+        /* a draft of a saved record that no longer exists (deleted elsewhere) starts fresh; a new one takes a saved business */
+        return NS.liveDraft(dr).then(function (live) {
+          if (dr && !live && !typed) { dr = null; editingId = null; doc = blank(); render(); }
+          var appNew = !typed && /[?&]new=1/.test(location.search) && NS.inApp;
+          return NS.liveSeller(doc.seller, CFG, !dr || appNew).then(function (b) {
+            if (dr && appNew && b && doc.seller.name) { dr = null; doc = blank(); }
+            /* an unfinished draft keeps everything, but still gets the next number when its number box is empty or still automatic */
+            if (dr || typed) { if (b && !doc.seller.name) { setSeller(b); render(); } return suggestNumber(false); }
+            var seller = doc.seller; doc = blank(); doc.seller = seller;
+            if (b) setSeller(b);
+            render(); return suggestNumber(true);
+          });
         });
       }).then(function () {
         if (S.ready) S.ready(K);

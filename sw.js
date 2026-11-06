@@ -1,7 +1,11 @@
-const CACHE = 'ns-pharmacy-f377bec674';
-const SHELL = ["/", "/assets/base.css?v=b5fb54a4c3", "/assets/doc.css?v=385ab57a21", "/assets/i18n.js?v=bec1343f51", "/assets/store.js?v=822e5db118", "/assets/core.js?v=d916a908a9", "/assets/safe.js?v=69ce2e3766", "/assets/help.js?v=ddaed68b26", "/assets/extras.js?v=6479f34b4b", "/assets/kit.js?v=e5cf8845b5", "/assets/pharmacy.js?v=6ecd4bf019", "/assets/kit.css?v=22e2f97260", "/assets/safe.css?v=f3b3edd6eb", "/assets/stockcore.js?v=7972a281d3", "/assets/stockwarn.js?v=b4a88f0bc8", "/assets/desk.js?v=71ecdfa62c", "/assets/desk.css?v=2253af2872", "/assets/contact.js?v=b289faf522", "/assets/books.js?v=b80078c8e4", "/assets/xlsx.js?v=9c9abd01b6", "/assets/tally.js?v=bb798e5007", "/assets/acct.js?v=5ab3ff2906"];
-self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
+const CACHE = 'ns-pharmacy-548293b1c5';
+const SHELL = ["/", "/assets/b-kit-t.604abb30d1.css", "/assets/b-core.2dc894c3b2.js", "/assets/b-kit.4110fe1089.js", "/assets/books.js?v=b80078c8e4", "/assets/xlsx.js?v=9c9abd01b6", "/assets/tally.js?v=533e88364b", "/assets/acct.js?v=d16cff575f"];
+const WARM = [], LGROUPS = [];
+const slow = () => { const c = self.navigator && navigator.connection; return !!c && (c.saveData || /2g/.test(c.effectiveType || '')); };
+const keep = (c, list) => Promise.allSettled(list.map(u => c.match(u).then(m => m || c.add(u))));
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).then(() => slow() ? 0 : keep(c, WARM))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(n => n.startsWith('ns-') && n !== CACHE).map(n => caches.delete(n)))).then(() => self.clients.claim())); });
+const langDone = {};
 self.addEventListener('fetch', e => {
   const r = e.request, u = new URL(r.url);
   if (r.method !== 'GET') return;
@@ -11,9 +15,15 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (r.mode === 'navigate' || u.pathname.endsWith('.html') || u.pathname.endsWith('/')) {
-    e.respondWith(fetch(r).then(res => { const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)); return res; })
-      .catch(() => caches.match(r).then(m => m || caches.match('/'))));
+    const key = u.origin + u.pathname, net = fetch(r).then(res => { if (res.ok) { const c = res.clone(); caches.open(CACHE).then(x => x.put(key, c)); } return res; });
+    e.respondWith(caches.match(key).then(saved => {
+      if (!saved) return net.catch(() => u.pathname.startsWith('/do/') ? Response.error() : caches.match('/'));
+      return Promise.race([net.catch(() => saved), new Promise(ok => setTimeout(() => ok(saved), 2500))]);
+    }));
+    e.waitUntil(net.then(() => 0, () => 0));
     return;
   }
+  const lm = LGROUPS.length && /^\/assets\/lang\/([a-z]+)\.[^/]+\.js$/.exec(u.pathname);
+  if (lm && !langDone[lm[1]] && !slow()) { langDone[lm[1]] = 1; e.waitUntil(caches.open(CACHE).then(c => keep(c, LGROUPS.map(g => '/assets/lang/' + lm[1] + '.' + g + '.js')))); }
   e.respondWith(caches.match(r, { ignoreSearch: false }).then(m => m || fetch(r).then(res => { if (res.ok) { const c = res.clone(); caches.open(CACHE).then(x => x.put(r, c)); } return res; })));
 });
