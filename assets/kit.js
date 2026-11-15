@@ -410,6 +410,13 @@
       dlg.showModal ? dlg.showModal() : dlg.setAttribute('open', '');
     }
     K.history = openHistory; K.renderHistory = renderHistory; K.openDoc = openDoc;
+    /* a new document started from another screen with fields ready (the student fees screen hands a fee receipt over this way): keeps the business, takes a fresh number */
+    K.apply = function (p) {
+      var seller = doc.seller, keep = S.keepOnNew ? S.keepOnNew(doc) : {}, b = p.buyer || {}, rest = Object.assign({}, p); delete rest.buyer;
+      doc = Object.assign(blank(), keep, rest); doc.seller = seller; doc.buyer = Object.assign(blank().buyer, b); editingId = null;
+      buildEditor(); fillForm(); draw(); saveDraft(); setStatus(); showTab('edit');
+      return suggestNumber(true).then(saveDraft);
+    };
 
     /* ---------- print, share ---------- */
     function fileName() { return S.name(doc) + ' ' + (doc.no || '') + (doc.buyer && doc.buyer.name ? ' - ' + doc.buyer.name : ''); }
@@ -458,7 +465,7 @@
       ed.addEventListener('input', function () { typed = true; });
       /* the form shows at once (it used to wait for the data home, up to 6 s on a first visit, while the preview already showed);
              saved defaults arrive later and never overwrite what the visitor has started typing */
-      if (!/[?&](open|from)=/.test(location.search)) root.classList.add('live');
+      if (!/[?&](open|from|pre)=/.test(location.search)) root.classList.add('live');
       NSStore.ready().then(function () { return NS.loadCfg().then(function (c) { CFG = c || {}; }, function () {}); }).then(function () {
         if (NS.leaving) return;
         var open = new URLSearchParams(location.search).get('open');
