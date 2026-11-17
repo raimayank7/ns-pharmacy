@@ -436,7 +436,7 @@
       showTab('preview', true); draw(true); fit();
       var o = sums(), text = S.name(doc) + ' ' + doc.no + ' from ' + (doc.seller.name || '') + '\nDate: ' + NS.fmtDate(doc.date) + (o.total ? '\nAmount: ' + NS.money(o.total) : '') + (S.shareText ? S.shareText(doc, o) : '') +
         (doc.seller.upi && S.upiShare !== false && o.due !== 0 ? '\nPay by UPI: ' + doc.seller.upi : '');
-      NS.sharePdf($$('.sh', sheet), fileName(), doc.paper, S.name(doc) + ' ' + doc.no, text).then(function () { draw(); });
+      NS.sharePdf($$('.sh', sheet), fileName(), doc.paper, S.name(doc) + ' ' + doc.no, text, { phone: doc.buyer && doc.buyer.phone }).then(function () { draw(); });
     }
     function showTab(which, quiet) {
       root.setAttribute('data-tab', which);

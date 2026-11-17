@@ -86,3 +86,11 @@ table.day.rq-board td b{font-weight:700}
 .gr-a{display:flex;gap:6px;flex-wrap:wrap}
 .gr-tabs{margin:4px 0 8px;flex-wrap:wrap;gap:6px}
 #gr-dlg .dlg-b,#am-dlg .dlg-b{overflow-x:hidden}
+/* India plan C: trips and fleet desk (trips.js) */
+#tp-dlg .dlg-b{overflow-x:hidden}
+#tp-dlg .tp-row{align-items:end;border-bottom:1px dashed var(--line);padding-bottom:8px}
+#tp-dlg .tp-per{gap:8px;flex-wrap:wrap}
+#tp-dlg table.day{width:100%}
+#tp-dlg .tbl-wrap,#tp-dlg #tp-repb{overflow-x:auto}
+#tp-print{display:none}
+@media print{html.tp-on body>*:not(#tp-print){display:none!important}html.tp-on #tp-print{display:block;color:#000;background:#fff;padding:12px}html.tp-on #tp-print table{width:100%;border-collapse:collapse}html.tp-on #tp-print th,html.tp-on #tp-print td{border:1px solid #888;padding:3px 5px;font-size:12px}html.tp-on #tp-print .n{text-align:right}html.tp-on #tp-print .gr-a,html.tp-on #tp-print .btn{display:none}html.tp-on #tp-print ul{list-style:none;padding:0}html.tp-on #tp-print li{border-bottom:1px solid #ccc;padding:4px 0}}
