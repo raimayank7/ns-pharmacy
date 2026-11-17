@@ -246,14 +246,15 @@
       if (editingId && !force) return Promise.resolve();
       var fy = NS.fy(doc.date), short = fy.slice(2, 4) + '-' + fy.slice(5), pre = prefixNow(), digits = S.digits || 3;
       var prefix = (pre ? pre + '/' : '') + short + '/';
-      return NSStore.list('doc').then(function (all) {
+      return Promise.all([NSStore.list('doc'), NSStore.sfTag()]).then(function (r) {
+        var all = r[0]; prefix += r[1];   /* shared folder mode: this computer's letter */
         var who = key(doc.seller.name), max = 0;
         all.forEach(function (d) {
           if (d.type !== DT || d.id === editingId || NS.fy(d.date) !== fy || key(d.seller && d.seller.name) !== who) return;
           if (String(d.no || '').indexOf(prefix) !== 0) return;
           var m = String(d.no || '').match(/(\d+)\s*$/); if (m) max = Math.max(max, +m[1]);
         });
-        if (force || !doc.no || doc.no === lastAuto || /^[A-Z]+\/\d\d-\d\d\/\d+$/.test(doc.no)) {
+        if (force || !doc.no || doc.no === lastAuto || /^[A-Z]+\/\d\d-\d\d\/[A-Z]{0,3}\d+$/.test(doc.no)) {
           doc.no = lastAuto = prefix + String(max + 1).padStart(digits, '0');
           var n = $('[data-b="no"]', root); if (n) n.value = doc.no;
           draw();
