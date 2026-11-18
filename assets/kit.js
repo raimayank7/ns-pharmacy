@@ -135,7 +135,7 @@
       sign: function (d, top, bottom) { var s = d.seller; return '<div class="signbox"><p>' + (top || P['for'] + ' <b>' + esc(s.name || '') + '</b>') + '</p>' + (s.sign ? '<img src="' + s.sign + '" alt="">' : '<div class="sp"></div>') + '<p>' + (bottom || P.sign) + '</p></div>'; },
       blankSign: function (top, bottom) { return '<div class="signbox"><p>' + top + '</p><div class="sp"></div><p>' + bottom + '</p></div>'; },
       qr: function (d, amount) { return d.seller.upi && amount > 0 ? '<div class="qr"><div class="qr-img" data-qr="' + r2(amount) + '"></div><small>' + P.upi + '<br><b class="mono">' + esc(d.seller.upi) + '</b></small></div>' : ''; },
-      made: function () { return '<p class="made">Made free at ' + esc(/^(localhost|127\.)/.test(location.hostname) ? (window.NS_CFG && NS_CFG.host || 'billing.niveshsahayak.in') : location.hostname.replace(/^www\./, '')) + '</p>'; },
+      made: function () { return NS.creditLine('made'); },
       /* thermal roll: shop head, then key/value lines */
       thOpen: function (d, title) {
         var s = d.seller;
