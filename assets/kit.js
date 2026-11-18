@@ -327,10 +327,10 @@
         return Promise.reject(new Error(probs[0][1]));
       }
       var ask = S.confirm ? S.confirm(doc, sums(), K) : null;
-      if (ask && !confirm(ask)) return Promise.reject(new Error('cancel'));
-      return NSStore.list('doc').then(function (all) {
+      function yes(m) { return NS.ask ? NS.ask(m) : Promise.resolve(window.confirm(m)); }   /* the site's own question box */
+      return (ask ? yes(ask).then(function (ok) { if (!ok) throw new Error('cancel'); }) : Promise.resolve()).then(function () { return NSStore.list('doc'); }).then(function (all) {
         var dup = all.filter(function (d) { return d.id !== editingId && d.type === DT && key(d.no) === key(doc.no) && NS.fy(d.date) === NS.fy(doc.date) && key(d.seller && d.seller.name) === key(doc.seller.name); })[0];
-        if (dup && !confirm(tw('c.qdup', { no: doc.no }))) throw new Error('cancel');
+        if (dup) return yes(tw('c.qdup', { no: doc.no })).then(function (ok) { if (!ok) throw new Error('cancel'); });
       }).then(function () {
         var jobs = [], s = cur.seller, b = cur.buyer || {};
         jobs.push(upsert('biz', function (x) { return key(x.name) === key(s.name); }, JSON.parse(JSON.stringify(s))));
@@ -478,7 +478,7 @@
         var open = new URLSearchParams(location.search).get('open');
         if (open) {
           history.replaceState(null, '', location.pathname + location.hash);
-          return NSStore.get('doc', open).then(function (rec) { if (rec && mine(rec)) openDoc(rec, false); else NS.toast(t('conv.none'), 'bad'); }).catch(function () {});
+          return NSStore.get('doc', open).then(function (rec) { if (rec && mine(rec)) openDoc(rec, false); else NS.toast(t('conv.none'), 'bad'); }).then(function () { if (NS.autoPrint && NS.autoPrint()) setTimeout(printDoc, 900); }).catch(function () {});
         }
         /* a draft of a saved record that no longer exists (deleted elsewhere) starts fresh; a new one takes a saved business */
         return NS.liveDraft(dr).then(function (live) {
