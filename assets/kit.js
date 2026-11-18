@@ -306,7 +306,8 @@
     /* ---------- draft, save ---------- */
     function saveDraft() { try { localStorage.setItem(dkey, JSON.stringify({ doc: doc, id: editingId })); } catch (e) {} }
     function loadDraft() { try { var j = JSON.parse(localStorage.getItem(dkey) || 'null'); return j && j.doc ? j : null; } catch (e) { return null; } }
-    function upsert(store, match, obj) { return NSStore.list(store).then(function (all) { var hit = all.filter(match)[0]; return NSStore.put(store, Object.assign(hit || {}, obj)); }); }
+    function keepFull(o) { var r = {}; Object.keys(o || {}).forEach(function (k) { if (o[k] !== '' && o[k] != null) r[k] = o[k]; }); return r; }   /* F6-4: an empty box on a document never wipes a saved value */
+    function upsert(store, match, obj) { return NSStore.list(store).then(function (all) { var hit = all.filter(match)[0]; return NSStore.put(store, Object.assign(hit || {}, hit ? keepFull(obj) : obj)); }); }
     function validate() {
       var o = sums(), p = [];
       if (!String(doc.seller.name || '').trim()) p.push(['k-seller-name', t('v.bname')]);
@@ -318,7 +319,10 @@
       if (doc.buyer && doc.buyer.gstin && !NS.gstinCheck(doc.buyer.gstin).ok) p.push(['k-buyer-gstin', t('v.bg')]);
       return p;
     }
-    function save() {
+    /* one save at a time: a double click or Ctrl+S pressed twice saved the document twice with one number (F3-1) */
+    var saving = null;
+    function save() { if (saving) return saving; saving = Promise.resolve(save0()); var free = function () { saving = null; }; saving.then(free, free); return saving; }
+    function save0() {
       var cur = doc, curId = editingId;   /* the record being saved, even if a new one is started while saving */
       var probs = validate();
       if (probs.length) {
@@ -408,7 +412,7 @@
           NSStore.get('doc', id).then(function (rec) {
             if (!rec) return;
             if (act === 'open' || act === 'copy') { dlg.close(); openDoc(rec, act === 'copy'); }
-            else if (act === 'del' && confirm(t('b1.cdel', { x: rec.no }))) return NSStore.del('doc', id).then(function () { if (editingId === id) { editingId = null; setStatus(); } renderHistory(); NS.toast(t('b1.binned')); }, function (err) { NS.toast(err.message, 'bad'); });
+            else if (act === 'del') return (NS.ask ? NS.ask(t('b1.cdel', { x: rec.no })) : Promise.resolve(window.confirm(t('b1.cdel', { x: rec.no })))).then(function (ok) { if (ok) return NSStore.del('doc', id).then(function () { if (editingId === id) { editingId = null; setStatus(); } renderHistory(); NS.toast(t('b1.binned')); }, function (err) { NS.toast(err.message, 'bad'); }); });
             else if (S.histAct) return Promise.resolve(S.histAct(act, rec, K)).then(function (changed) { if (changed && editingId === id) { doc = Object.assign(doc, changed); fillForm(); draw(); } renderHistory(); });
           });
         });

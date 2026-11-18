@@ -7,7 +7,8 @@
   'use strict';
   if (!window.NS || !window.NSStore || !window.NSStock) return;
   var SELL = /^(billing|cash-memo|pos|pharmacy)\./;
-  if (!SELL.test((window.NS_CFG && NS_CFG.host) || '')) return;
+  var C0 = window.NS_CFG || {};   /* the maker on its own site, or its copy inside the App (#do/billing/: host is the App's, inApp names the maker, F5-2) */
+  if (!SELL.test(C0.host || '') && !SELL.test((C0.inApp || '') + '.')) return;
   var $ = NS.$, $$ = NS.$$, S = NSStock, key = S.key, num = S.num;
   var DOCS = [], ITEMS = [], ready = false, timer = 0;
 
