@@ -1,5 +1,5 @@
 /* pharmacy.niveshsahayak.in: chemist's bill with batch, expiry, MRP, manufacturer, patient and doctor, schedule-drug notes,
-   and the Schedule H1 register as a CSV file. Record type 'pharma' (a sale in the Nivesh Sahayak App).
+   and the Schedule H1 register as a CSV file. Record type 'pharma' (a sale in NSBiz).
    Medicines are sold at or below MRP, and MRP includes GST: the bill takes MRP and discount, and works the taxable value out
    (rate = MRP without GST, so every other tool reads the lines the usual way). */
 (function () {
