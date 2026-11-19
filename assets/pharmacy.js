@@ -88,7 +88,7 @@
     pickItem: function (it, m, d) {
       it.desc = m.desc; it.mfr = m.mfr || it.mfr; it.hsn = m.hsn || it.hsn; it.unit = m.unit || it.unit; it.sched = m.sched || it.sched;
       if (m.gst !== '' && m.gst != null) it.gst = m.gst;
-      it.mrp = m.mrp != null && m.mrp !== '' ? String(m.mrp) : it.mrp; syncRate(d, it);
+      it.mrp = m.mrp != null && m.mrp !== '' ? String(m.mrp) : num(m.rate) ? String(Math.round(num(m.rate) * (1 + num(m.gst) / 100) * 100) / 100) : it.mrp; syncRate(d, it);   /* F5-8 */
     },
     input: function (p, el, d, K) {
       if (p === 'kind') { d.items.forEach(function (it) { syncRate(d, it); }); K.refill(); }

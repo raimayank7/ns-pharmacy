@@ -29,7 +29,9 @@
       var d = { type: DT, no: '', date: NS.today(), paper: c.paper || S.paper || 'a4', design: c.design || 'classic', accent: c.accent || inv.accent || ACCENTS[0], copies: 1, notes: c.notes || '',
         seller: { name: '', addr: '', city: '', pin: '', state: '', gstin: '', phone: '', email: '', pan: '', logo: '', sign: '', bankName: '', bankAcc: '', bankIfsc: '', bankBranch: '', upi: '' },
         buyer: { name: '', addr: '', city: '', pin: '', state: '', gstin: '', phone: '' } };
-      return Object.assign(d, S.blank ? S.blank(c, inv) : {});
+      d = Object.assign(d, S.blank ? S.blank(c, inv) : {});
+      var vc = NS.vtCfg(C, S.type, '', ''); NS.vtApply(d, vc, ['design', 'notes'].concat(S.papers && S.papers.indexOf(vc.paper) >= 0 ? ['paper'] : []));   /* C-11 / C-14 */
+      return d;
     }
     function sums() { return S.sums ? S.sums(doc) : { total: 0 }; }
 
@@ -99,6 +101,7 @@
       rf: function (name, i, k, label, o) {
         o = o || {};
         var id = 'r-' + name + '-' + k + '-' + i, v = (doc[name][i] || {})[k];
+        if (name === 'items') o = Object.assign({}, o, { cls: ((o.cls || '') + ' kr-' + k).trim() });   /* ERP C-9: fields the items switch can hide */
         if (o.type === 'select') return '<div class="f' + (o.cls ? ' ' + o.cls : '') + '"><label for="' + id + '">' + esc(label) + '</label><select id="' + id + '" data-r="' + name + '" data-i="' + i + '" data-k="' + k + '">' +
           o.opts.map(function (x) { return '<option value="' + esc(x[0]) + '"' + (String(v) === String(x[0]) ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join('') + '</select></div>';
         return '<div class="f' + (o.cls ? ' ' + o.cls : '') + '"><label for="' + id + '">' + esc(label) + '</label><input id="' + id + '" data-r="' + name + '" data-i="' + i + '" data-k="' + k + '" value="' + esc(v == null ? '' : v) + '"' +
@@ -107,7 +110,7 @@
       },
       /* printed pieces (English) */
       design: function (show) { return NS.designField('k-design', ' data-b="design"').replace('<div class="f wide dpick-f"', '<div class="f wide dpick-f"' + (show ? ' data-show="' + show + '"' : '')); },
-      open: function (d, cls) { return '<div class="sh ' + (cls || '') + ' d-' + esc(d.design || 'classic') + (d.paper === 'a5' ? ' a5' : '') + '" style="--ac:' + esc(d.accent) + '" lang="en-IN" dir="ltr">'; },
+      open: function (d, cls) { return '<div class="sh ' + (cls || '') + ' d-' + esc(d.design || 'classic') + (d.paper === 'a5' ? ' a5' : '') + '" style="--ac:' + esc(d.accent) + '" lang="en-IN" dir="ltr">' + (d.cancelled ? '<div class="stamp cx-stamp">CANCELLED</div>' : ''); },   /* A-3 */
       head: function (d, title, sub, extra) {
         var s = d.seller;
         return '<header class="sh-top"><div class="sh-from">' + (s.logo ? '<img class="logo" src="' + s.logo + '" alt="">' : '') +
@@ -139,7 +142,7 @@
       /* thermal roll: shop head, then key/value lines */
       thOpen: function (d, title) {
         var s = d.seller;
-        return '<div class="sh th ' + esc(d.paper) + '" lang="en-IN" dir="ltr">' + (s.logo ? '<img class="logo" src="' + s.logo + '" alt="">' : '') +
+        return '<div class="sh th ' + esc(d.paper) + '" lang="en-IN" dir="ltr">' + (d.cancelled ? '<p class="cx-line">*** CANCELLED ***</p>' : '') + (s.logo ? '<img class="logo" src="' + s.logo + '" alt="">' : '') +
           '<h2>' + (s.name ? esc(s.name) : '<span class="ph">Your business name</span>') + '</h2>' + (s.addr ? '<p>' + esc(s.addr).replace(/\n/g, '<br>') + '</p>' : '') + K.cityPin(s) +
           (s.gstin ? '<p>' + P.gstin + ': <b class="mono">' + esc(s.gstin) + '</b></p>' : '') + (s.phone ? '<p>' + P.ph + ': ' + esc(s.phone) + '</p>' : '') + (title ? '<p class="dt">' + title + '</p>' : '');
       },
@@ -157,7 +160,9 @@
     function buildEditor() {
       var ed = $('#ed', root);
       var hub = (window.NS_CFG && NS_CFG.vault ? new URL(NS_CFG.vault, location.href).origin : 'https://my.niveshsahayak.in') + '/';
-      ed.innerHTML = '<p class="hub-link"><a href="' + hub + '" target="_blank" rel="noopener">' + esc(t('hub.link')) + ' ›</a></p>' + S.form(K);
+      ed.innerHTML = '<p class="hub-link"><a href="' + hub + '" target="_blank" rel="noopener">' + esc(t('hub.link')) + ' ›</a></p>' + S.form(K) +
+        (window.NSCF ? NSCF.slipEditor({ doc: function () { return Object.assign(doc, { type: doc.type || DT }); }, changed: function () { draw(); saveDraft(); } }) : '');   /* custom fields (ERP Round 2) */
+      if (window.NSCF) NSCF.slipWire(ed);
       ['logo', 'sign'].forEach(function (k) {
         var inp = $('#s-' + k, ed); if (!inp) return;
         inp.addEventListener('change', function (e) { var f = e.target.files[0]; if (f) shrink(f, k === 'logo' ? 360 : 420).then(function (u) { doc.seller[k] = u; fillForm(true); draw(); saveDraft(); }); });
@@ -177,22 +182,32 @@
         fillForm(); suggestNumber(true); draw(); saveDraft();
       });
       var bn = $('[data-b="buyer.name"]', ed);
-      if (bn) NS.suggest(bn, function () { return NSStore.list('party').then(function (l) { return NS.forBiz(l, doc.seller); }); }, function (x) { return x.name; }, function (p) {
+      if (bn) NS.suggest(bn, function () { return NSStore.list('party').then(function (l) { return NS.active(NS.forBiz(l, doc.seller)); }); }, function (x) { return x.name; }, function (p) {
         doc.buyer = Object.assign(doc.buyer || {}, { name: p.name, addr: p.addr || '', city: p.city || '', pin: p.pin || '', state: p.state || '', gstin: p.gstin || '', phone: p.phone || '' });
         if (S.pickParty) S.pickParty(p, doc);
         fillForm(); draw(); saveDraft();
       });
       if (S.wire) S.wire(ed, K);
     }
+    /* ERP C-9: a tool with plain service lines (S.acctLines: clinic, garage, job card, salon) shows particulars and value only when
+       the business has "Items with quantity" off; tools where quantity is the trade itself (counter, chemist, restaurant, hotel nights,
+       running bills...) keep their columns */
+    function kitMode() {
+      if (!S.acctLines || !root) return;
+      var acct = !NS.bizModeOf(doc && doc.seller, CFG).inv, box = $('[data-rows="items"]', root); if (!box) return;
+      box.classList.toggle('nx-acct', acct);
+      $$('.kr-rate label', box).forEach(function (l) { if (!l.hasAttribute('data-l0')) l.setAttribute('data-l0', l.textContent); l.textContent = acct ? t('nx.value') : l.getAttribute('data-l0'); });
+    }
     function renderRows(n) {
       var box = $('[data-rows="' + n + '"]', root); if (!box) return;
+      setTimeout(kitMode, 0);
       box.innerHTML = doc[n].map(function (row, i) {
         return '<div class="it" data-i="' + i + '"><div class="it-head"><span>' + esc(t('it.n', { n: i + 1 })) + '</span>' + (doc[n].length > 1 || S.emptyRows ? '<button type="button" class="link" data-del="' + n + ':' + i + '">' + esc(t('it.rm')) + '</button>' : '') + '</div>' +
           '<div class="it-grid">' + S.rows[n](row, i, K) + '</div></div>';
       }).join('');
       $$('[data-del]', box).forEach(function (b) { b.addEventListener('click', function () { var x = b.getAttribute('data-del').split(':'); doc[x[0]].splice(+x[1], 1); renderRows(x[0]); draw(); saveDraft(); }); });
       $$('[data-sug="item"]', box).forEach(function (inp) {
-        NS.suggest(inp, function () { return NSStore.list('item').then(function (l) { return NS.forBiz(l, doc.seller); }); }, function (x) { return x.desc; }, function (m) {
+        NS.suggest(inp, function () { return NSStore.list('item').then(function (l) { return NS.active(NS.forBiz(l, doc.seller)); }); }, function (x) { return x.desc; }, function (m) {
           var i = +inp.getAttribute('data-i'), row = doc[n][i];
           if (S.pickItem) S.pickItem(row, m, doc); else { row.desc = m.desc; if (m.hsn) row.hsn = m.hsn; if (m.unit) row.unit = m.unit; if (m.rate != null && m.rate !== '') row.rate = m.rate; if (m.gst != null && m.gst !== '') row.gst = m.gst; }
           renderRows(n); draw(); saveDraft();
@@ -216,6 +231,7 @@
         var on = m.length > 1 ? m[1].split('|').indexOf(String(v)) >= 0 : !!v; e.hidden = neg ? on : !on;
       });
       if (S.look) S.look(ed, doc, K);
+      if (!onlyLook && window.NSCF) NSCF.slipFill();
     }
     function checkGstin(inp) {
       var err = $('#' + inp.id + '-err', root), r = NS.gstinCheck(inp.value);
@@ -242,21 +258,26 @@
 
     /* ---------- numbering: PREFIX/YY-YY/001 per business and financial year ---------- */
     function prefixNow() { var c = NS.cfgFor(CFG, doc && doc.seller)[S.type] || {}; return String(c.prefix != null ? c.prefix : typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix).trim().replace(/[^A-Za-z0-9\/\-]/g, ''); }
+    /* the one numbering engine (core.js NS.nextNo, ERP A-6): this tool's series (S.type), counted over saved records of its type that
+       start with the same prefix (a tool may make several series), its own width, always with the financial year unless set otherwise */
+    function nxOpts() {
+      var C = NS.cfgFor(CFG, doc && doc.seller), o = { type: DT, sub: doc.vt || '', seller: doc.seller.name || '', date: doc.date, cfg: C, counter: !!doc.counter, skip: editingId,
+        def: typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix, width: S.digits || 3, fy: true };
+      o.series = NS.seriesOf(C, S.type, '', doc.vt, o);
+      var head = NS.nxHead(o.series, doc.date, '');
+      o.match = function (d) { return String(d.no || '').indexOf(head) === 0; };
+      return o;
+    }
     function suggestNumber(force) {
       if (editingId && !force) return Promise.resolve();
-      var fy = NS.fy(doc.date), short = fy.slice(2, 4) + '-' + fy.slice(5), pre = prefixNow(), digits = S.digits || 3;
-      var prefix = (pre ? pre + '/' : '') + short + '/';
       return Promise.all([NSStore.list('doc'), NSStore.sfTag()]).then(function (r) {
-        var all = r[0]; prefix += r[1];   /* shared folder mode: this computer's letter */
-        var who = key(doc.seller.name), max = 0, nos = [];
-        all.forEach(function (d) {
-          if (d.type !== DT || d.id === editingId || NS.fy(d.date) !== fy || key(d.seller && d.seller.name) !== who) return;
-          if (String(d.no || '').indexOf(prefix) !== 0) return;
-          var m = String(d.no || '').match(/(\d+)\s*$/); if (m) { max = Math.max(max, +m[1]); nos.push(d.no); }
-        });
+        var o = nxOpts(); o.tag = r[1];   /* shared folder mode: this computer's letter */
+        var x = NS.nextNo(r[0], o), who = key(doc.seller.name);
+        NS.noBox($('[data-b="no"]', root), x.series);
         if (force || !doc.no || doc.no === lastAuto || /^[A-Z]+\/\d\d-\d\d\/[A-Z]{0,3}\d+$/.test(doc.no)) {
-          return NSStore.sfClaim({ scope: DT + '|' + who, prefix: prefix, digits: digits, nos: nos }).then(function (c) {
-            doc.no = lastAuto = c || prefix + String(max + 1).padStart(digits, '0');
+          if (x.manual) { doc.no = lastAuto = ''; var n0 = $('[data-b="no"]', root); if (n0) n0.value = ''; draw(); return; }
+          return (x.suffix || x.series.restart !== 'year' ? Promise.resolve(null) : NSStore.sfClaim({ scope: DT + '|' + who + (doc.vt ? '|' + doc.vt : ''), prefix: x.head, digits: x.width, nos: x.nos })).then(function (c) {
+            doc.no = lastAuto = c || x.no;
             var n = $('[data-b="no"]', root); if (n) n.value = doc.no;
             draw();
           });
@@ -269,7 +290,7 @@
       if (!sheet) return;
       var o = sums(), n = all === true ? Math.max(1, +doc.copies || 1) : 1;
       var labels = S.copyLabels && n > 1 ? S.copyLabels.slice(0, n) : [S.copyLabels && +doc.copies > 1 ? S.copyLabels[0] : ''];
-      sheet.innerHTML = labels.map(function (l) { return S.sheet(doc, o, K, l); }).join('');
+      sheet.innerHTML = labels.map(function (l) { var h = S.sheet(doc, o, K, l); return window.NSCF ? NSCF.slipPrint(Object.assign({ type: DT }, doc), h) : h; }).join('');
       var st = $('#ns-page') || document.head.appendChild(Object.assign(document.createElement('style'), { id: 'ns-page' }));
       st.textContent = '@media print{@page{' + (PAGES[doc.paper] || 'size:A4;margin:0') + '}}';
       $$('[data-qr]', sheet).forEach(function (q) { drawQr(q, +q.getAttribute('data-qr')); });
@@ -307,7 +328,8 @@
     function saveDraft() { try { localStorage.setItem(dkey, JSON.stringify({ doc: doc, id: editingId })); } catch (e) {} }
     function loadDraft() { try { var j = JSON.parse(localStorage.getItem(dkey) || 'null'); return j && j.doc ? j : null; } catch (e) { return null; } }
     function keepFull(o) { var r = {}; Object.keys(o || {}).forEach(function (k) { if (o[k] !== '' && o[k] != null) r[k] = o[k]; }); return r; }   /* F6-4: an empty box on a document never wipes a saved value */
-    function upsert(store, match, obj) { return NSStore.list(store).then(function (all) { var hit = all.filter(match)[0]; return NSStore.put(store, Object.assign(hit || {}, hit ? keepFull(obj) : obj)); }); }
+    function upsert(store, match, obj) { return NSStore.list(store).then(function (all) { var hit = all.filter(match)[0], o = hit ? keepFull(obj) : obj; if (store === 'item' && hit && String(hit.unit || '').trim()) o = Object.assign({}, o, { unit: hit.unit });   /* ERP I-3: a saved item keeps its own unit */
+      return NSStore.put(store, Object.assign(hit || {}, o)); }); }
     function validate() {
       var o = sums(), p = [];
       if (!String(doc.seller.name || '').trim()) p.push(['k-seller-name', t('v.bname')]);
@@ -330,11 +352,13 @@
         if (f) { var det = f.closest('details'); if (det) det.open = true; showTab('edit'); f.focus(); }
         return Promise.reject(new Error(probs[0][1]));
       }
+      var cfb = window.NSCF && NSCF.slipBlock(Object.assign({ type: DT }, doc)); if (cfb) { NS.toast(cfb, 'bad'); return Promise.reject(new Error(cfb)); }   /* required custom fields */
       var ask = S.confirm ? S.confirm(doc, sums(), K) : null;
       function yes(m) { return NS.ask ? NS.ask(m) : Promise.resolve(window.confirm(m)); }   /* the site's own question box */
-      return (ask ? yes(ask).then(function (ok) { if (!ok) throw new Error('cancel'); }) : Promise.resolve()).then(function () { return NSStore.list('doc'); }).then(function (all) {
-        var dup = all.filter(function (d) { return d.id !== editingId && d.type === DT && key(d.no) === key(doc.no) && NS.fy(d.date) === NS.fy(doc.date) && key(d.seller && d.seller.name) === key(doc.seller.name); })[0];
-        if (dup) return yes(tw('c.qdup', { no: doc.no })).then(function (ok) { if (!ok) throw new Error('cancel'); });
+      return (ask ? yes(ask).then(function (ok) { if (!ok) throw new Error('cancel'); }) : Promise.resolve()).then(function () { return NS.creditAskDoc ? NS.creditAskDoc(Object.assign({ type: DT }, doc), editingId) : 0; }).then(function () { return NS.stockGuard ? NS.stockGuard(Object.assign({ type: DT }, doc), editingId) : 0; })   /* A-15: credit check before a credit sale */.then(function () { return NSStore.list('doc'); }).then(function (all) {
+        var pb = NS.noProblem(all, Object.assign({ type: DT }, doc, { id: editingId || '_new' }), nxOpts());   /* one check for every type (A-6) */
+        if (pb && pb.block) { NS.toast(pb.msg, 'bad'); var nf = $('[data-b="no"]', root); if (nf) { showTab('edit'); nf.focus(); } throw new Error('cancel'); }
+        if (pb) return yes(tw('c.qdup', { no: doc.no })).then(function (ok) { if (!ok) throw new Error('cancel'); });
       }).then(function () {
         var jobs = [], s = cur.seller, b = cur.buyer || {};
         jobs.push(upsert('biz', function (x) { return key(x.name) === key(s.name); }, JSON.parse(JSON.stringify(s))));
@@ -372,7 +396,7 @@
       /* the seller of the last document may have been deleted since: a new document takes a saved business */
       NS.liveSeller(seller, CFG, true).then(function (b) { if (b) { setSeller(b); fillForm(); draw(); } return suggestNumber(true); }).then(saveDraft, function () {});
     }
-    function setSeller(b) { doc.seller = Object.assign(blank().seller, b); delete doc.seller.id; delete doc.seller.created; delete doc.seller.updated; }
+    function setSeller(b) { setTimeout(kitMode, 0); doc.seller = Object.assign(blank().seller, b); delete doc.seller.id; delete doc.seller.created; delete doc.seller.updated; }
     function openDoc(rec, asCopy) {
       doc = Object.assign(blank(), JSON.parse(JSON.stringify(rec)));
       delete doc.id; delete doc.created; delete doc.updated; delete doc.total;
@@ -396,6 +420,7 @@
           return '<li><div><b class="mono">' + esc(d.no) + '</b> · ' + NS.fmtDate(d.date) + '<br><span>' + esc(S.histName ? S.histName(d) : d.buyer && d.buyer.name || t('h.nocust')) + '</span> · <b>' + NS.money(d.total || 0) + '</b>' + (S.histPill ? S.histPill(d, K) : '') + '</div>' +
             '<div class="row"><button type="button" class="btn sm" data-h="open" data-id="' + d.id + '">' + esc(t('h.open')) + '</button><button type="button" class="btn sm" data-h="copy" data-id="' + d.id + '">' + esc(t(S.copyLbl || 'h.copy')) + '</button>' +
             (S.histActs ? S.histActs(d, K) : '') +
+            (NS.cancelDoc && d.no && (d.cancelled || window.NSBooks && NSBooks.role(d)) ? '<button type="button" class="btn sm" data-h="cx" data-id="' + d.id + '">' + esc(t(d.cancelled ? 'au.uncxb' : 'au.cxb')) + '</button>' : '') +   /* A-3 */
             '<button type="button" class="btn sm danger" data-h="del" data-id="' + d.id + '">' + esc(t('h.del')) + '</button></div></li>';
         }).join('') : '<li class="empty">' + esc(t(v ? 'h.nomatch' : 'h.none')) + '</li>';
       });
@@ -412,6 +437,7 @@
           NSStore.get('doc', id).then(function (rec) {
             if (!rec) return;
             if (act === 'open' || act === 'copy') { dlg.close(); openDoc(rec, act === 'copy'); }
+            else if (act === 'cx') return NS.cancelDoc(rec).then(function () { renderHistory(); });   /* A-3 */
             else if (act === 'del') return (NS.ask ? NS.ask(t('b1.cdel', { x: rec.no })) : Promise.resolve(window.confirm(t('b1.cdel', { x: rec.no })))).then(function (ok) { if (ok) return NSStore.del('doc', id).then(function () { if (editingId === id) { editingId = null; setStatus(); } renderHistory(); NS.toast(t('b1.binned')); }, function (err) { NS.toast(err.message, 'bad'); }); });
             else if (S.histAct) return Promise.resolve(S.histAct(act, rec, K)).then(function (changed) { if (changed && editingId === id) { doc = Object.assign(doc, changed); fillForm(); draw(); } renderHistory(); });
           });
@@ -469,7 +495,9 @@
       function render() { buildEditor(); fillForm(); draw(); setStatus(); labelButtons(); if (histOpen) renderHistory(); series(); }
       /* "Change number series" under the number box (this site's documents always carry the financial year) */
       function series() { NS.seriesLink($('[data-b="no"]', root), { type: S.type, biz: function () { return doc.seller; }, def: function () { return typeof S.prefix === 'function' ? S.prefix(doc) : S.prefix; }, name: function () { return NS.t('Doc.' + S.type); },
-        digits: S.digits || 3, fy: true, apply: function (c) { CFG = c || {}; if (!editingId) suggestNumber(true); } }); }
+        digits: S.digits || 3, fy: true, apply: function (c) { CFG = c || {}; if (!editingId) suggestNumber(true); } });
+        NS.subPick($('[data-b="no"]', root), { type: S.type, cfg: function () { return NS.cfgFor(CFG, doc.seller); }, get: function () { return doc.vt || ''; }, saved: function () { return !!editingId; },   /* A-7 */
+          set: function (id) { if (id) doc.vt = id; else delete doc.vt; suggestNumber(true).then(saveDraft); } }); }
       render();
       document.addEventListener('ns-lang', render);
       var typed = false;
@@ -477,7 +505,7 @@
       /* the form shows at once (it used to wait for the data home, up to 6 s on a first visit, while the preview already showed);
              saved defaults arrive later and never overwrite what the visitor has started typing */
       if (!/[?&](open|from|pre)=/.test(location.search)) root.classList.add('live');
-      NSStore.ready().then(function () { return NS.loadCfg().then(function (c) { CFG = c || {}; }, function () {}); }).then(function () {
+      NSStore.ready().then(function () { return NS.loadCfg().then(function (c) { CFG = c || {}; kitMode(); series(); }, function () {}); }).then(function () {
         if (NS.leaving) return;
         var open = new URLSearchParams(location.search).get('open');
         if (open) {
@@ -505,10 +533,10 @@
       $$('[data-do]').forEach(function (b) {
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-do');
-          if (a === 'save') save().catch(function () {});
+          if (a === 'save') save().then(function () { NS.vtAfterSave(NS.vtCfg(NS.cfgFor(CFG, doc.seller), S.type, '', doc.vt), printDoc, shareDoc); }).catch(function () {});
           else if (a === 'print') printDoc();
           else if (a === 'share') shareDoc();
-          else if (a === 'new') { if (!editingId && (sums().total || 0) > 0 && !confirm(tw('c.new'))) return; startNew(); }
+          else if (a === 'new') { if (!editingId && (sums().total || 0) > 0 && !NS.okSync(tw('c.new'))) return; startNew(); }
           else if (a === 'history') openHistory();
           else if (S.act) S.act(a, K);
         });
@@ -518,7 +546,7 @@
       if (window.ResizeObserver) new ResizeObserver(fit).observe($('.pv', root));
       window.addEventListener('beforeprint', fit);
       document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save().catch(function () {}); }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save().then(function () { NS.vtAfterSave(NS.vtCfg(NS.cfgFor(CFG, doc.seller), S.type, '', doc.vt), printDoc, shareDoc); }).catch(function () {}); }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') { e.preventDefault(); printDoc(); }
       });
     }

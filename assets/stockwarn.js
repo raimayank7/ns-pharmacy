@@ -32,8 +32,14 @@
     var biz = seller(); if (!biz) { $$('.sw-hint').forEach(function (h) { h.remove(); }); return; }
     var no = key(docNo()), b = key(biz);
     var docs = no ? DOCS.filter(function (d) { return !(key(d.seller && d.seller.name) === b && key(d.no) === no && d.type !== 'stk' && d.type !== 'pbill'); }) : DOCS;
-    var have = S.inHand(docs, ITEMS, biz, NS.today ? NS.today() : '');
-    var rows = qs.map(function (q) { var r = rowOf(q), d = r && r.querySelector('[data-k="desc"]'); return { q: q, r: r, k: key(d && d.value), n: num(q.value) }; });
+    /* ERP I-8: stock on the document's own date, in its godown when the business keeps godowns (the date box, else today) */
+    var day = val('#d-date') || val('[data-b="date"]') || (NS.today ? NS.today() : ''), gsel = $('#dm-gd'), gd = gsel ? (gsel.value || S.MAIN) : null;
+    var have = S.inHand(docs, ITEMS, biz, day, gd), prom = S.promised ? S.promised(docs, ITEMS, biz, day) : {};   /* ERP round 2: open sales orders */
+    /* ERP I-3: a line in another unit of the item (2 Box) counts in the item's own unit (24 Nos) */
+    var rows = qs.map(function (q) {
+      var r = rowOf(q), d = r && r.querySelector('[data-k="desc"]'), u = r && r.querySelector('[data-k="unit"]'), k = key(d && d.value), m = ITEMS.filter(function (i) { return key(i.desc) === k; })[0];
+      return { q: q, r: r, k: k, n: num(q.value) * (window.NSMfg && m && u ? NSMfg.factor(m, u.value) : 1) };
+    });
     var want = {}; rows.forEach(function (x) { if (x.k) want[x.k] = (want[x.k] || 0) + x.n; });
     rows.forEach(function (x) {
       if (!x.r) return;
@@ -43,6 +49,7 @@
       if (!bad) { if (h) h.remove(); return; }
       var txt = have[x.k] > 0 ? NS.t('sw.only', { n: NS.qty ? NS.qty(have[x.k]) : have[x.k], u: (m && m.unit) || '' }).replace(/\s{2,}/g, ' ') : NS.t('sw.none');
       if (!h) { h = document.createElement('p'); h.className = 'sw-hint'; h.setAttribute('role', 'status'); x.r.appendChild(h); }
+      if (prom[x.k] > 0) txt += ' ' + NS.t('sw.prom', { p: NS.qty ? NS.qty(prom[x.k]) : prom[x.k] });
       if (h.textContent !== txt) h.textContent = txt;
     });
   }
