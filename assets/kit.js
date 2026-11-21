@@ -297,12 +297,13 @@
       var es = $('#ed-sums', root);
       if (es) es.innerHTML = S.edSums ? S.edSums(doc, o, K) : '<b>' + esc(t('sum.total', { v: NS.money(o.total || 0) })) + '</b>';
       if (S.drawn) S.drawn(doc, o, K);
+      if (NS.rpButtons) NS.rpButtons(/^th/.test(doc.paper || ''), function () { if ((sums().total || 0) > 0 || editingId) save().then(rprintDoc, function () {}); else rprintDoc(); });
       fit();
     }
     function drawQr(box, amount) {
       if (!window.qrcode || !doc.seller.upi) { box.hidden = true; return; }
       var link = 'upi://pay?pa=' + encodeURIComponent(doc.seller.upi.trim()) + '&pn=' + encodeURIComponent((doc.seller.name || '').slice(0, 40)) + '&am=' + amount.toFixed(2) + '&cu=INR&tn=' + encodeURIComponent((S.name(doc) + ' ' + doc.no).slice(0, 40));
-      try { var qr = qrcode(0, 'M'); qr.addData(link); qr.make(); box.innerHTML = qr.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); } catch (e) { box.hidden = true; }
+      try { var qr = qrcode(0, 'M'); qr.addData(link); qr.make(); box.innerHTML = qr.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); box.setAttribute('data-link', link); } catch (e) { box.hidden = true; }
     }
     function fit() {
       var wrap = $('.pv', root), sc = $('.pv-scale', root);
@@ -459,10 +460,16 @@
     /* ---------- print, share ---------- */
     function fileName() { return S.name(doc) + ' ' + (doc.no || '') + (doc.buyer && doc.buyer.name ? ' - ' + doc.buyer.name : ''); }
     function printDoc() {
+      if (/^th/.test(doc.paper || '') && NS.rpReady && NS.rpReady()) { rprintDoc(); return; }   /* a receipt printer is set up on this device: no print box */
+      browserPrint();
+    }
+    function browserPrint() {
       var old = document.title; document.title = fileName();
       showTab('preview', true); draw(true); fit();
       setTimeout(function () { window.print(); document.title = old; draw(); }, 60);
     }
+    /* receipt printer (thermal, ESC/POS, NS.rpPrint in core.js): the thermal sheet on screen, all copies, each cut apart */
+    function rprintDoc() { draw(true); var p = NS.rpPrint(sheet, browserPrint); draw(); return p; }
     function shareDoc() {
       showTab('preview', true); draw(true); fit();
       var o = sums(), text = S.name(doc) + ' ' + doc.no + ' from ' + (doc.seller.name || '') + '\nDate: ' + NS.fmtDate(doc.date) + (o.total ? '\nAmount: ' + NS.money(o.total) : '') + (S.shareText ? S.shareText(doc, o) : '') +
