@@ -344,9 +344,11 @@
     }
     /* one save at a time: a double click or Ctrl+S pressed twice saved the document twice with one number (F3-1) */
     var saving = null;
-    function save() { if (saving) return saving; saving = Promise.resolve(save0()); var free = function () { saving = null; }; saving.then(free, free); return saving; }
+    /* while a save is running the form is locked: a tap or a key then cannot change the bill that is being saved (R-005) */
+    function lockEd(on) { var ed = $('#ed', root); if (!ed) return; if (on) { ed.setAttribute('inert', ''); ed.style.opacity = '.6'; } else { ed.removeAttribute('inert'); ed.style.opacity = ''; } }
+    function save() { if (saving) return saving; var p = saving = Promise.resolve(save0()); var free = function () { if (saving === p) saving = null; lockEd(false); }; p.then(free, free); setTimeout(function () { if (saving === p) lockEd(true); }, 0); return p; }
     function save0() {
-      var cur = doc, curId = editingId;   /* the record being saved, even if a new one is started while saving */
+      var orig = doc, cur = JSON.parse(JSON.stringify(doc)), curId = editingId;   /* a copy: dishes typed while the save waits for the credit, stock and number checks must not join this bill (R-005) */
       var probs = validate();
       if (probs.length) {
         var f = $('#' + probs[0][0], root); NS.toast(probs[0][1], 'bad');
@@ -379,7 +381,7 @@
         if (curId) rec.id = curId;
         return NSStore.put('doc', rec);
       }).then(function (rec) {
-        if (cur !== doc) return rec;
+        if (orig !== doc) return rec;
         editingId = rec.id; saveDraft(); NS.toast(tw('saved', { no: doc.no })); NS.folderWrite(false); NS.checkReminder(); setStatus();
         if (S.saved) S.saved(rec, K);
         return rec;
