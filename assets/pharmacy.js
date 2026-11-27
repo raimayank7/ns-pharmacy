@@ -51,7 +51,7 @@
   }
 
   var K = NS.kit({
-    type: 'pharma', prefix: 'PH', digits: 4, paper: 'a5', papers: ['a5', 'a4', 'th80'],
+    type: 'pharma', prefix: 'PH', digits: 4, paper: 'a5', papers: NS.PAPER_ALL,
     name: function (d) { return d.kind === 'tax' ? 'Invoice' : d.kind === 'supply' ? 'Bill of Supply' : 'Cash Memo'; },
     blank: function () { return { kind: 'plain', round: true, status: 'paid', payMode: 'cash', doctor: '', docReg: '', age: '', rxNo: '', dl: '', pharmacist: '', items: [row()] }; },
     newRow: function () { return row(); },

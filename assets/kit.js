@@ -8,7 +8,7 @@
   'use strict';
   var $ = NS.$, $$ = NS.$$, esc = NS.esc, num = NS.num, r2 = NS.r2, t = NS.t;
   var ACCENTS = ['#0B3B5B', '#1D4ED8', '#047857', '#B45309', '#9D174D', '#334155'];
-  var PAGES = { a5: 'size:A5;margin:0', th80: 'size:80mm 297mm;margin:0', th58: 'size:58mm 297mm;margin:0' };
+  var PAGES = null;   /* the page size of every paper comes from NS.paperCss (core.js) */
   var MODES = ['cash', 'upi', 'cheque', 'bank', 'card', 'other'];
   var P = { gstin: 'GSTIN', ph: 'Phone', pan: 'PAN', for: 'For', sign: 'Authorised signatory', words: 'Amount in words', upi: 'Scan to pay by UPI',
     cash: 'Cash', upim: 'UPI', cheque: 'Cheque', bank: 'Bank transfer', card: 'Card', other: 'Other' };
@@ -88,7 +88,7 @@
       lookCard: function (extra) {
         var papers = S.papers || [S.paper || 'a4'];
         return K.card(t('lg.notes'), '<div class="fg">' + K.f('notes', t('l.notes'), { type: 'textarea', wide: true }) +
-          (papers.length > 1 ? K.f('paper', t('l.paper'), { type: 'select', opts: papers.map(function (k) { return [k, t('pp.' + k)]; }) }) : '') +
+          (papers.length > 1 ? K.f('paper', t('l.paper'), { type: 'select', opts: papers.map(function (k) { return [k, NS.ppName(k)]; }) }) : '') +
           (papers.some(function (k) { return !/^th/.test(k); }) ? K.design() : '') +
           (S.copies ? K.f('copies', t('l.copies'), { type: 'select', opts: [['1', t('cps.1')]].concat(Array.apply(null, Array(S.copies - 1)).map(function (x, i) { return [String(i + 2), t('cps.n', { n: i + 2 })]; })) }) : '') +
           '<div class="f"><span class="lbl" id="acc-lbl">' + esc(t('l.colour')) + '</span><div class="swatches" role="radiogroup" aria-labelledby="acc-lbl">' + ACCENTS.map(function (c, i) { return '<button type="button" role="radio" class="sw" data-accent="' + c + '" style="--c:' + c + '" aria-label="' + esc(t('colour.n', { n: i + 1 })) + '"></button>'; }).join('') + '</div></div>' +
@@ -110,9 +110,13 @@
       },
       /* printed pieces (English) */
       design: function (show) { return NS.designField('k-design', ' data-b="design"').replace('<div class="f wide dpick-f"', '<div class="f wide dpick-f"' + (show ? ' data-show="' + show + '"' : '')); },
-      open: function (d, cls) { return '<div class="sh ' + (cls || '') + ' d-' + esc(d.design || 'classic') + (d.paper === 'a5' ? ' a5' : '') + '" style="--ac:' + esc(d.accent) + '" lang="en-IN" dir="ltr">' + (d.cancelled ? '<div class="stamp cx-stamp">CANCELLED</div>' : ''); },   /* A-3 */
+      /* a maker with no roll layout of its own (job card, hotel, rent, salon, garage, trip sheet) draws its A5 sheet from these pieces, which turn into roll pieces when the paper is a thermal roll */
+      roll: function (d) { return /^th/.test((d || doc || {}).paper || ''); },
+      open: function (d, cls) { if (K.roll(d)) return '<div class="sh th ' + esc(d.paper) + ' ' + (cls || '') + ' roll" lang="en-IN" dir="ltr">' + (d.cancelled ? '<p class="cx-line">*** CANCELLED ***</p>' : ''); return '<div class="sh ' + (cls || '') + ' d-' + esc(d.design || 'classic') + NS.paperClass(d.paper) + '" style="--ac:' + esc(d.accent) + '" lang="en-IN" dir="ltr">' + (d.cancelled ? '<div class="stamp cx-stamp">CANCELLED</div>' : ''); },   /* A-3 */
       head: function (d, title, sub, extra) {
         var s = d.seller;
+        if (K.roll(d)) return (s.logo ? '<img class="logo" src="' + s.logo + '" alt="">' : '') + '<h2>' + (s.name ? esc(s.name) : '<span class="ph">Your business name</span>') + '</h2>' + (s.addr ? '<p>' + esc(s.addr).replace(/\n/g, '<br>') + '</p>' : '') + K.cityPin(s) +
+          (s.gstin ? '<p>' + P.gstin + ': <b class="mono">' + esc(s.gstin) + '</b></p>' : '') + (s.phone ? '<p>' + P.ph + ': ' + esc(s.phone) + '</p>' : '') + (extra || '') + (title ? '<p class="dt">' + title + '</p>' : '') + (sub ? '<p class="copy">' + sub + '</p>' : '');
         return '<header class="sh-top"><div class="sh-from">' + (s.logo ? '<img class="logo" src="' + s.logo + '" alt="">' : '') +
           '<div><h2>' + (s.name ? esc(s.name) : '<span class="ph">Your business name</span>') + '</h2>' + (s.addr ? '<p>' + esc(s.addr).replace(/\n/g, '<br>') + '</p>' : '<p class="ph">Address</p>') + K.cityPin(s) +
           (s.state ? '<p>' + esc(NS.stateName(s.state)) + ' (' + s.state + ')</p>' : '') +
@@ -121,6 +125,7 @@
       },
       meta: function (pairs) {
         pairs = pairs.filter(function (p) { return p && p[1]; });
+        if (K.roll()) return K.kv(pairs);
         var h = '';
         for (var i = 0; i < pairs.length; i += 2) h += '<tr><th>' + pairs[i][0] + '</th><td' + (pairs[i + 1] ? '' : ' colspan="3"') + '>' + pairs[i][1] + '</td>' + (pairs[i + 1] ? '<th>' + pairs[i + 1][0] + '</th><td>' + pairs[i + 1][1] + '</td>' : '') + '</tr>';
         return h ? '<table class="meta">' + h + '</table>' : '';
@@ -132,11 +137,12 @@
           (p.phone ? '<p>' + P.ph + ': ' + esc(p.phone) + '</p>' : '') + (extra || '') + '</div>';
       },
       tot: function (rows) {
+        if (K.roll()) return K.kv(rows.filter(Boolean), 'tot');
         return '<table class="tot">' + rows.filter(Boolean).map(function (r) { return '<tr' + (r[2] ? ' class="' + r[2] + '"' : '') + '><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>'; }).join('') + '</table>';
       },
       words: function (n) { return n ? '<p class="words"><span>' + P.words + ':</span> <b>' + NS.inWords(n) + '</b></p>' : ''; },
-      sign: function (d, top, bottom) { var s = d.seller; return '<div class="signbox"><p>' + (top || P['for'] + ' <b>' + esc(s.name || '') + '</b>') + '</p>' + (s.sign ? '<img src="' + s.sign + '" alt="">' : '<div class="sp"></div>') + '<p>' + (bottom || P.sign) + '</p></div>'; },
-      blankSign: function (top, bottom) { return '<div class="signbox"><p>' + top + '</p><div class="sp"></div><p>' + bottom + '</p></div>'; },
+      sign: function (d, top, bottom) { var s = d.seller; if (K.roll(d)) return '<p class="nt1">' + (top || P['for'] + ' <b>' + esc(s.name || '') + '</b>') + '</p><p class="nt1">' + (bottom || P.sign) + '</p>'; return '<div class="signbox"><p>' + (top || P['for'] + ' <b>' + esc(s.name || '') + '</b>') + '</p>' + (s.sign ? '<img src="' + s.sign + '" alt="">' : '<div class="sp"></div>') + '<p>' + (bottom || P.sign) + '</p></div>'; },
+      blankSign: function (top, bottom) { if (K.roll()) return '<p class="nt1">' + top + '</p><p class="nt1">' + bottom + '</p>'; return '<div class="signbox"><p>' + top + '</p><div class="sp"></div><p>' + bottom + '</p></div>'; },
       qr: function (d, amount) { return d.seller.upi && amount > 0 ? '<div class="qr"><div class="qr-img" data-qr="' + r2(amount) + '"></div><small>' + P.upi + '<br><b class="mono">' + esc(d.seller.upi) + '</b></small></div>' : ''; },
       made: function () { return NS.creditLine('made'); },
       /* thermal roll: shop head, then key/value lines */
@@ -291,8 +297,9 @@
       var o = sums(), n = all === true ? Math.max(1, +doc.copies || 1) : 1;
       var labels = S.copyLabels && n > 1 ? S.copyLabels.slice(0, n) : [S.copyLabels && +doc.copies > 1 ? S.copyLabels[0] : ''];
       sheet.innerHTML = labels.map(function (l) { var h = S.sheet(doc, o, K, l); return window.NSCF ? NSCF.slipPrint(Object.assign({ type: DT }, doc), h) : h; }).join('');
+      NS.rollTables(sheet);
       var st = $('#ns-page') || document.head.appendChild(Object.assign(document.createElement('style'), { id: 'ns-page' }));
-      st.textContent = '@media print{@page{' + (PAGES[doc.paper] || 'size:A4;margin:0') + '}}';
+      st.textContent = '@media print{@page{' + NS.paperCss(doc.paper) + '}}';
       $$('[data-qr]', sheet).forEach(function (q) { drawQr(q, +q.getAttribute('data-qr')); });
       var es = $('#ed-sums', root);
       if (es) es.innerHTML = S.edSums ? S.edSums(doc, o, K) : '<b>' + esc(t('sum.total', { v: NS.money(o.total || 0) })) + '</b>';
@@ -508,6 +515,9 @@
         digits: S.digits || 3, fy: true, apply: function (c) { CFG = c || {}; if (!editingId) suggestNumber(true); } });
         NS.subPick($('[data-b="no"]', root), { type: S.type, cfg: function () { return NS.cfgFor(CFG, doc.seller); }, get: function () { return doc.vt || ''; }, saved: function () { return !!editingId; },   /* A-7 */
           set: function (id) { if (id) doc.vt = id; else delete doc.vt; suggestNumber(true).then(saveDraft); } }); }
+      /* the App's Print designs screen draws this maker's paper from a document made up in the App (printdesign.js), nothing is saved */
+      window.NSDocOut = { id: function () { return editingId; }, nodes: function () { return $$('.sh', sheet); }, paper: function () { return doc.paper; },
+        show: function (d) { doc = Object.assign(blank(), JSON.parse(JSON.stringify(d))); editingId = '(preview)'; draw(); return $$('.sh', sheet); }, title: function () { return doc.no || ''; } };
       render();
       document.addEventListener('ns-lang', render);
       var typed = false;
@@ -532,6 +542,8 @@
             if (dr || typed) { if (b && !doc.seller.name) { setSeller(b); render(); } return suggestNumber(false); }
             var seller = doc.seller; doc = blank(); doc.seller = seller;
             if (b) setSeller(b);
+            /* the voucher type's design / paper / notes saved for THIS business (Print designs): known only now the seller is, like slip.js */
+            if (b && doc.seller && doc.seller.name) { var vc2 = NS.vtCfg(NS.cfgFor(CFG, doc.seller), S.type, '', ''); NS.vtApply(doc, vc2, ['design', 'notes'].concat(S.papers && S.papers.indexOf(vc2.paper) >= 0 ? ['paper'] : [])); }
             render(); return suggestNumber(true);
           });
         });
