@@ -395,7 +395,7 @@
       }).catch(function (e) { if (e.message !== 'cancel') NS.toast(t('nosave', { e: e.message }), 'bad'); throw e; });
     }
     function setStatus() {
-      NS.docNav && NS.docNav(root, { current: function () { return editingId; }, open: function (r) { openDoc(r); }, list: openHistory, mine: mine });
+      NS.docNav && NS.docNav(root, { current: function () { return editingId; }, open: function (r) { openDoc(r); }, list: openHistory, check: validate, copy: function (r) { openDoc(r, true); }, example: function () { var was = JSON.stringify(doc); NS.mkExample(doc, S.type); buildEditor(); fillForm(); draw(); return function () { doc = JSON.parse(was); buildEditor(); fillForm(); draw(); }; }, mine: mine });
       var st = $('#tool-status', root); if (st) st.textContent = editingId ? tw('st.edit', { no: doc.no }) : tw('st.new');
       /* shared folder mode: another computer has this bill open right now */
     var eid = editingId; NSStore.sfEditing(editingId, doc.no).then(function (o) { if (o && st && eid === editingId) st.textContent = tw('st.edit', { no: doc.no }) + ' \u00b7 ' + NS.t('sfd.editing', { who: o.who || o.name }); });
@@ -556,8 +556,10 @@
         b.addEventListener('click', function () {
           var a = b.getAttribute('data-do');
           if (a === 'save') save().then(function () { NS.vtAfterSave(NS.vtCfg(NS.cfgFor(CFG, doc.seller), S.type, '', doc.vt), printDoc, shareDoc); }).catch(function () {});
-          else if (a === 'print') printDoc();
-          else if (a === 'share') shareDoc();
+          else if (a === 'print' || a === 'share') {   /* makers-better: Print and Share save first, like the App; an empty bill never prints (owner 27 Nov) */
+            var go = a === 'print' ? printDoc : shareDoc;
+            if ((sums().total || 0) > 0) save().then(go, function () {}); else NS.toast(NS.t('mk.empty'), 'bad');
+          }
           else if (a === 'new') { if (!editingId && (sums().total || 0) > 0 && !NS.okSync(tw('c.new'))) return; startNew(); }
           else if (a === 'history') openHistory();
           else if (S.act) S.act(a, K);
