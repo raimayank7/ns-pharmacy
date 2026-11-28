@@ -458,6 +458,18 @@
       dlg.showModal ? dlg.showModal() : dlg.setAttribute('open', '');
     }
     K.history = openHistory; K.renderHistory = renderHistory; K.openDoc = openDoc;
+    /* byof2-receipts: another screen (rcptbulk.js) draws a document of this tool with its own printed sheet, and counts on in its series */
+    K.out = function (d, label) {
+      var keep = doc, b = blank(); doc = Object.assign(b, d); doc.seller = Object.assign(b.seller, d.seller || {}); doc.buyer = Object.assign(b.buyer, d.buyer || {});
+      try { var h = S.sheet(doc, sums(), K, label || ''); return window.NSCF ? NSCF.slipPrint(Object.assign({ type: DT }, doc), h) : h; } finally { doc = keep; }
+    };
+    K.nextFor = function (seller, date) {
+      var keep = doc, o; doc = blank(); doc.seller = Object.assign(doc.seller, seller || {}); doc.date = date || NS.today();
+      try { o = nxOpts(); } finally { doc = keep; }
+      o.skip = null;
+      return NSStore.list('doc').then(function (all) { var x = NS.nextNo(all, o); x.used = all.filter(function (d) { return d.type === DT && d.no; }).map(function (d) { return d.no; }); return x; });
+    };
+    K.blankDoc = function () { return blank(); };
     /* a new document started from another screen with fields ready (the student fees screen hands a fee receipt over this way): keeps the business, takes a fresh number */
     K.apply = function (p) {
       var seller = doc.seller, keep = S.keepOnNew ? S.keepOnNew(doc) : {}, b = p.buyer || {}, rest = Object.assign({}, p); delete rest.buyer;
